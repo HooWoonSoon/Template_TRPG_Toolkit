@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 35be955107652b2478445cda669fb1d9, type: 3}
+  m_Name: Lanselot
+  m_EditorClassIdentifier: 
+  characterName: Lanselot
+  profile: {fileID: 21300000, guid: ff3d9ff9ccf546347bef650feb86bedd, type: 3}
+  turnUISprite: {fileID: 21300000, guid: 4e256d9a08b556047898841cb7fb06c1, type: 3}
+  isometricIcon: {fileID: 21300000, guid: 4cdfef10fb3ad314f8009a5fec45827c, type: 3}
+  type: 1
+  health: 170
+  mental: 80
+  physicAttack: 24
+  magicAttack: 18
+  speed: 16
+  movementValue: 5
+  criticalChance: 0.1

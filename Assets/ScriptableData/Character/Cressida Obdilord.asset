@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 35be955107652b2478445cda669fb1d9, type: 3}
+  m_Name: Cressida Obdilord
+  m_EditorClassIdentifier: 
+  characterName: Cressida Obdilord
+  profile: {fileID: 21300000, guid: bb01db6c477a14843986a2674de13cec, type: 3}
+  turnUISprite: {fileID: 21300000, guid: d38b3d52c1da3114d9d88dd1e92af5c9, type: 3}
+  isometricIcon: {fileID: 21300000, guid: 72df556e798f7fb44962098ce3285f7f, type: 3}
+  type: 1
+  health: 150
+  mental: 100
+  physicAttack: 0
+  magicAttack: 20
+  speed: 7
+  movementValue: 5
+  criticalChance: 0.1

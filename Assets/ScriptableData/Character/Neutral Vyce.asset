@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 35be955107652b2478445cda669fb1d9, type: 3}
+  m_Name: Neutral Vyce
+  m_EditorClassIdentifier: 
+  characterName: Neutral Vyce
+  profile: {fileID: 21300000, guid: 720e3cfe277e30e4ebdf5d31e5ed095d, type: 3}
+  turnUISprite: {fileID: 21300000, guid: f4e43e1af64344d4eb8de9cfcaf7012d, type: 3}
+  isometricIcon: {fileID: 21300000, guid: 0e7b9c75172349348b29c2214692c43b, type: 3}
+  type: 0
+  unitType: 0
+  health: 180
+  mental: 50
+  physicAttack: 24
+  magicAttack: 0
+  speed: 13
+  movementValue: 4
+  criticalChance: 0.1

@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 35be955107652b2478445cda669fb1d9, type: 3}
+  m_Name: Olivya Phoraena
+  m_EditorClassIdentifier: 
+  characterName: Olivya Phoraena
+  profile: {fileID: 21300000, guid: 1e8d04f9cda073d42b594c9709f0e27e, type: 3}
+  turnUISprite: {fileID: 21300000, guid: bc8b60ea9d58c094eb09dab75e7647c3, type: 3}
+  isometricIcon: {fileID: 21300000, guid: dccac3d63372fe0468db68b8082a2c81, type: 3}
+  type: 0
+  unitType: 0
+  health: 120
+  mental: 200
+  physicAttack: 0
+  magicAttack: 15
+  speed: 3
+  movementValue: 4
+  criticalChance: 0.1

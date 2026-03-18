@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf9edda547487934589d8ce0076d85c5, type: 3}
+  m_Name: Melee Attack
+  m_EditorClassIdentifier: 
+  skillName: Melee Attack
+  skillIcon: {fileID: 21300000, guid: 49c9206e2a50e8944a4b8e5608ab5a9d, type: 3}
+  description: The melee attack, use sword attack the single unit.
+  abilityType: 0
+  skillType: 0
+  isTargetTypeSkill: 1
+  skillTargetType: 2
+  skillRange: 2
+  occlusionRange: 1
+  aoeRadius: 1
+  isProjectile: 0
+  projectTilePrefab: {fileID: 0}
+  initialElevationAngle: 0
+  MPIcon: {fileID: 0}
+  requireMP: 0
+  MPAmount: 0
+  damageAmount: 25
+  healAmount: 0
+  skillCastTime: 1

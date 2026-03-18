@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf9edda547487934589d8ce0076d85c5, type: 3}
+  m_Name: Archery Shooting
+  m_EditorClassIdentifier: 
+  skillName: Archery Shooting
+  skillIcon: {fileID: 21300000, guid: 54b763209277a3f438a7733dff99e37a, type: 3}
+  description: The archery shooting, use bow to shoot the unit
+  abilityType: 0
+  skillType: 0
+  isTargetTypeSkill: 1
+  skillTargetType: 2
+  skillRange: 7
+  occlusionRange: 3
+  aoeRadius: 1
+  isProjectile: 1
+  projectTilePrefab: {fileID: 6351172539165178106, guid: cc2563b24ce269f44b26145380286a4d, type: 3}
+  initialElevationAngle: 70
+  MPIcon: {fileID: 0}
+  requireMP: 1
+  MPAmount: 0
+  damageAmount: 20
+  healAmount: 0
+  skillCastTime: 1
