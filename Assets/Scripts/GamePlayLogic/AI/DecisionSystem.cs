@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using NUnit.Framework.Internal;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
@@ -30,6 +31,9 @@ namespace Tactics.AI
         private Orientation orientation;
 
         private float shootOffsetHeight = 1.5f;
+
+        private Dictionary<(GameNode, GameNode), int> pathCostCache
+        = new Dictionary<(GameNode, GameNode), int>();
 
         private bool debugMode = false;
 
@@ -178,6 +182,8 @@ namespace Tactics.AI
             else
                 EvaluateOrientation(moveNode, ref orientation);
             this.orientation = orientation;
+            
+            pathCostCache.Clear();  //Release historical path cache
 
             float endTime = Time.realtimeSinceStartup;
 
@@ -186,6 +192,18 @@ namespace Tactics.AI
                     $"{decisionMaker.data.characterName}, " +
                     $"{executeLog}, " +
                     $" completed in {endTime - startTime:F4} seconds");
+        }
+
+        public int GetCachedPathCost(GameNode start, GameNode target, CharacterBase pathfinder,
+            int riseLimit, int lowerLimit)
+        {
+            var key = (start, target);
+            if (pathCostCache.TryGetValue(key, out int cacheCost))
+                return cacheCost;
+
+            int cost = pathFinding.GetTargetNodeCost(start, target, pathfinder, riseLimit, lowerLimit);
+            pathCostCache[key] = cost;
+            return cost;
         }
 
         #region Evaluation Methods
@@ -693,18 +711,18 @@ namespace Tactics.AI
 
         public class CharacterSkillInfluenceNodes
         {
-            public Dictionary<CharacterBase, Dictionary<SkillData, List<GameNode>>> oppositeInfluence;
-            public Dictionary<CharacterBase, Dictionary<SkillData, List<GameNode>>> teammateInfluence;
+            public Dictionary<CharacterBase, Dictionary<SkillData, HashSet<GameNode>>> oppositeInfluence;
+            public Dictionary<CharacterBase, Dictionary<SkillData, HashSet<GameNode>>> teammateInfluence;
 
             public CharacterSkillInfluenceNodes(DecisionSystem decisionSystem, List<CharacterBase> opposites,
                 List<CharacterBase> teammates, bool debugMode = false)
             {
-                oppositeInfluence = new Dictionary<CharacterBase, Dictionary<SkillData, List<GameNode>>>();
-                teammateInfluence = new Dictionary<CharacterBase, Dictionary<SkillData, List<GameNode>>>();
+                oppositeInfluence = new Dictionary<CharacterBase, Dictionary<SkillData, HashSet<GameNode>>>();
+                teammateInfluence = new Dictionary<CharacterBase, Dictionary<SkillData, HashSet<GameNode>>>();
 
                 foreach (var opposite in opposites)
                 {
-                    Dictionary<SkillData, List<GameNode>> skillCanAttackSet =
+                    Dictionary<SkillData, HashSet<GameNode>> skillCanAttackSet =
                     decisionSystem.GetOppositeSkillInfluence(opposite);
 
                     if (debugMode)
@@ -712,7 +730,7 @@ namespace Tactics.AI
                         foreach (var kvp in skillCanAttackSet)
                         {
                             string skillName = kvp.Key.skillName;
-                            string nodeLog = string.Join(", ", kvp.Value.ConvertAll(n => n.GetNodeVectorInt()));
+                            string nodeLog = string.Join(", ", kvp.Value.Select(n => n.GetNodeVectorInt()));
 
                             Debug.Log(
                                 $"Opposite: {opposite.data.characterName}, " +
@@ -725,7 +743,7 @@ namespace Tactics.AI
 
                 foreach (var teammate in teammates)
                 {
-                    Dictionary<SkillData, List<GameNode>> skillCanSupportSet =
+                    Dictionary<SkillData, HashSet<GameNode>> skillCanSupportSet =
                     decisionSystem.GetTeammateSkillInfluence(teammate);
 
                     if (debugMode)
@@ -733,7 +751,7 @@ namespace Tactics.AI
                         foreach (var kvp in skillCanSupportSet)
                         {
                             string skillName = kvp.Key.skillName;
-                            string nodeLog = string.Join(", ", kvp.Value.ConvertAll(n => n.GetNodeVectorInt()));
+                            string nodeLog = string.Join(", ", kvp.Value.Select(n => n.GetNodeVectorInt()));
 
                             Debug.Log(
                                 $"Teammate: {teammate.data.characterName}, " +
@@ -745,10 +763,10 @@ namespace Tactics.AI
                 }
             }
         }
-        private Dictionary<SkillData, List<GameNode>> GetOppositeSkillInfluence
+        private Dictionary<SkillData, HashSet<GameNode>> GetOppositeSkillInfluence
             (CharacterBase opposite)
         {
-            Dictionary<SkillData, List<GameNode>> skillCanAttackSet = new Dictionary<SkillData, List<GameNode>>();
+            Dictionary<SkillData, HashSet<GameNode>> skillCanAttackSet = new Dictionary<SkillData, HashSet<GameNode>>();
 
             int currentMental = opposite.currentMental;
 
@@ -769,14 +787,14 @@ namespace Tactics.AI
                         canAttackNodes.Add(scopeNode);
                     }
                 }
-                skillCanAttackSet[skill] = canAttackNodes.ToList();
+                skillCanAttackSet[skill] = canAttackNodes;
             }
             return skillCanAttackSet;
         }
-        private Dictionary<SkillData, List<GameNode>> GetTeammateSkillInfluence
+        private Dictionary<SkillData, HashSet<GameNode>> GetTeammateSkillInfluence
             (CharacterBase teammate)
         {
-            Dictionary<SkillData, List<GameNode>> skillCanSupportSet = new Dictionary<SkillData, List<GameNode>>();
+            Dictionary<SkillData, HashSet<GameNode>> skillCanSupportSet = new Dictionary<SkillData, HashSet<GameNode>>();
 
             int currentMental = teammate.currentMental;
 
@@ -797,7 +815,7 @@ namespace Tactics.AI
                         canAttackNodes.Add(scopeNode);
                     }
                 }
-                skillCanSupportSet[skill] = canAttackNodes.ToList();
+                skillCanSupportSet[skill] = canAttackNodes;
             }
             return skillCanSupportSet;
         }

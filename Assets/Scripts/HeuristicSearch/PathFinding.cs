@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using Unity.Jobs;
 
 public class PathFinding
 {
@@ -156,6 +155,12 @@ public class PathFinding
         return (xCost + yCost + zCost);
     }
 
+    /// <summary>
+    /// Comparing every node in the current calculated nodes, 
+    /// get the most lowest f Cost node be the next ideally target.
+    /// </summary>
+    /// <param name="nodeList"></param>
+    /// <returns></returns>
     private GameNode GetLowestFCostNode(List<GameNode> nodeList)
     {
         GameNode lowestFCostNode = nodeList[0];
@@ -233,6 +238,7 @@ public class PathFinding
             {
                 if (direction.x != 0 && direction.z != 0)
                 {
+                    //  To prevent the empty two slide then process diagonal walk cross
                     Vector3Int horizontalPos = currentNode.GetNodeVectorInt() + new Vector3Int(direction.x, 0, 0);
                     Vector3Int verticalPos = currentNode.GetNodeVectorInt() + new Vector3Int(0, 0, direction.z);
 
@@ -317,7 +323,7 @@ public class PathFinding
         if (processedPath.Count == 0) return null;
         return new PathRoute(processedPath, start);
     }
-    public int GetNodesBetweenCost(GameNode startNode, GameNode endNode, 
+    public int GetTargetNodeCost(GameNode startNode, GameNode endNode, 
         CharacterBase pathFinder, int riseLimit, int lowerLimit)
     {
         Vector3 start = startNode.GetNodeVector();

@@ -15,6 +15,8 @@ public class MoveTargetRule : ScoreRuleBase
         List<CharacterBase> teammates, List<CharacterBase> opposites, 
         DecisionSystem.CharacterSkillInfluenceNodes characterSkillInfluenceNodes)
     {
+        float startTime = Time.realtimeSinceStartup;
+
         PathFinding pathFinding = decisionSystem.pathFinding;
         CharacterData data = character.data;
         //  No Join the Rule
@@ -30,7 +32,7 @@ public class MoveTargetRule : ScoreRuleBase
 
         foreach (var targetNode in targetAroundNodes)
         {
-            int cost = pathFinding.GetNodesBetweenCost(moveNode, 
+            int cost = decisionSystem.GetCachedPathCost(moveNode, 
                 targetNode, character, 1, 1);
 
             if (cost < bestCost)
@@ -51,7 +53,7 @@ public class MoveTargetRule : ScoreRuleBase
         float distanceFactor = 1f / (1f + costFactor);
         float score = Mathf.Lerp(0f, scoreBonus, distanceFactor);
 
-        Dictionary<SkillData, List<GameNode>> oppositeSkillInflunce;
+        Dictionary<SkillData, HashSet<GameNode>> oppositeSkillInflunce;
 
         foreach (var opposite in opposites)
         {
@@ -79,6 +81,8 @@ public class MoveTargetRule : ScoreRuleBase
         foreach (var subRule in scoreSubRules)
             score += subRule.CalculateTargetScore(character, targetCharacter, teammates, opposites);
 
+        float endTime = Time.realtimeSinceStartup;
+
         if (DebugMode)
             Debug.Log(
                 $"<color=black>[MoveTargetRule]</color> " +
@@ -87,7 +91,8 @@ public class MoveTargetRule : ScoreRuleBase
                 $"MoveNode: {moveNode.GetNodeVectorInt()}, " +
                 $"Route actual cost: {bestCost}, " +
                 $"TargetNode: {bestTargetNode.GetNodeVectorInt()}, " +
-                $"get Score bonus: {score}");
+                $"get Score bonus: {score}, " +
+                $"Rule completed in {endTime - startTime:F4} seconds");
         return score;
     }
 }

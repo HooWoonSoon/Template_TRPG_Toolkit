@@ -4,6 +4,7 @@
 public class CharacterData : ScriptableObject
 {
     [Header("Character Information")]
+    public int ID;
     public string characterName;
     public Sprite profile;
     public Sprite turnUISprite;
