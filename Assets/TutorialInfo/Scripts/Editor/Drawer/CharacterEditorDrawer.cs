@@ -53,6 +53,7 @@ public static class CharacterEditorDrawer
     {
         EditorGUI.BeginChangeCheck();
 
+        data.ID = EditorGUILayout.IntField("ID", data.ID);
         data.characterName = EditorGUILayout.TextField("Name", data.characterName);
         data.profile = (Sprite)EditorGUILayout.ObjectField("Profile Image", data.profile,
             (typeof(Sprite)), false);

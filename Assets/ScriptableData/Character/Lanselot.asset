@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35be955107652b2478445cda669fb1d9, type: 3}
   m_Name: Lanselot
   m_EditorClassIdentifier: 
+  ID: 7
   characterName: Lanselot
   profile: {fileID: 21300000, guid: ff3d9ff9ccf546347bef650feb86bedd, type: 3}
   turnUISprite: {fileID: 21300000, guid: 4e256d9a08b556047898841cb7fb06c1, type: 3}

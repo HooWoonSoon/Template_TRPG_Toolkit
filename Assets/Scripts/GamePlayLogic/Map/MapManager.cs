@@ -33,10 +33,15 @@ public class MapManager : MonoBehaviour
     public MapData currentActivatedMap { get; private set; }
     public static MapManager instance { get; private set;}
 
+    public PathFinding pathFinding { get; private set; }
+    public PathFindingJobThread pathFindingJobThread { get; private set; }
+
     private void Awake()
     {
         instance = this;
         InitializeMap(mapDatas[0]);
+        pathFinding = new PathFinding(world);
+        //pathFindingJobThread = new PathFindingJobThread(world);
     }
 
     private void Start()
@@ -151,6 +156,8 @@ public class MapManager : MonoBehaviour
                 MapTeamManager.instance.GenerateTeam(teamCharacters, presetTeam.teamType);
             }
         }
+
+        //pathFindingJobThread.Initialize();
     }
 
     private void OnDrawGizmosSelected()

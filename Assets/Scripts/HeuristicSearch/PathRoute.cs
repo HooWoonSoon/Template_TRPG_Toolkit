@@ -14,7 +14,18 @@ public class PathRoute
 
     public PathRoute() { }
 
-    public PathRoute(List<GameNode> pathNodeList, Vector3 worldOrigin)
+    public PathRoute(List<Vector3Int> pathPosList)
+    {
+        pathNodeVectorList = new List<Vector3>();
+
+        foreach (Vector3Int pathPos in pathPosList)
+            pathNodeVectorList.Add(pathPos + new Vector3(0, offset, 0));
+        if (pathNodeVectorList.Count > 0)
+        {
+            pathIndex = 0;
+        }
+    }
+    public PathRoute(List<GameNode> pathNodeList)
     {
         pathNodeVectorList = new List<Vector3>();
 

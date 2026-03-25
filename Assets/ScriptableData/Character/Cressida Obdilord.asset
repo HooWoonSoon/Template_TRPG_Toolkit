@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35be955107652b2478445cda669fb1d9, type: 3}
   m_Name: Cressida Obdilord
   m_EditorClassIdentifier: 
+  ID: 8
   characterName: Cressida Obdilord
   profile: {fileID: 21300000, guid: bb01db6c477a14843986a2674de13cec, type: 3}
   turnUISprite: {fileID: 21300000, guid: d38b3d52c1da3114d9d88dd1e92af5c9, type: 3}

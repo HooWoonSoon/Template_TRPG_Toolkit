@@ -24,7 +24,7 @@ public class EnemyCharacter : CharacterBase
     protected override void Start()
     {
         base.Start();
-        decisionSystem = new DecisionSystem(world, utilityAI, this, true);
+        decisionSystem = new DecisionSystem(world, utilityAI, this, debugMode);
         stateMechine.Initialize(idleStateExplore);
 
         GameEvent.onDeploymentStart += () =>

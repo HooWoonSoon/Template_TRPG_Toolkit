@@ -12,15 +12,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35be955107652b2478445cda669fb1d9, type: 3}
   m_Name: Hierophant
   m_EditorClassIdentifier: 
+  ID: 6
   characterName: Hierophant
   profile: {fileID: 21300000, guid: 2d06de0c9ca7fa545b0a60d39834ba8b, type: 3}
   turnUISprite: {fileID: 21300000, guid: e035a073b1f24f9439e63df9e7762e0e, type: 3}
   isometricIcon: {fileID: 21300000, guid: 1d1a772398a6bef4face7d17b165a75e, type: 3}
   type: 1
-  unitType: 0
   health: 120
   mental: 150
   physicAttack: 0
   magicAttack: 20
   speed: 25
   movementValue: 4
+  criticalChance: 0.1

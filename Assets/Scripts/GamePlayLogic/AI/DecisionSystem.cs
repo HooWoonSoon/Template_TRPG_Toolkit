@@ -1,4 +1,5 @@
-﻿using NUnit.Framework.Internal;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -15,6 +16,7 @@ namespace Tactics.AI
         }
         public World world;
         public PathFinding pathFinding;
+        public PathFindingJobThread pathFindingJobThread;
         public UtilityAIScoreConfig utilityAI;
         public CharacterBase decisionMaker;
 
@@ -47,6 +49,9 @@ namespace Tactics.AI
 
             PathFinding pathfinding = new PathFinding(world);
             this.pathFinding = pathfinding;
+
+            PathFindingJobThread pathFindingJobThread = new PathFindingJobThread(world);
+            this.pathFindingJobThread = pathFindingJobThread;
 
             //  Move Rule
             List<IScoreRule> moveTargetSubRules = new List<IScoreRule>()
@@ -96,20 +101,197 @@ namespace Tactics.AI
             orientationRule.Add(new DefenseBackRule(this, this.utilityAI, null,
                 utilityAI.defenseBackRuleScore, RuleDebugContext.DefenseBack));
         }
-        public void MakeDecision(bool allowMove = true, bool allowSkill = true)
+
+
+        public struct SkillEvaluationResult
+        {
+            public float skillScore;
+            public SkillData originSkill;
+            public GameNode skillCastNode;
+            public GameNode originSkillTargetNode;
+            public string sourceSkill;
+        }
+        public struct MoveAndSkillEvaluateResult
+        {
+            public float skillScore;
+            public SkillData moveSkill;
+            public GameNode moveSkillMoveNode;
+            public GameNode moveSkillTargetNode;
+            public string sourceMoveAndSkill;
+        }
+        public struct MoveEvaluateResult
+        {
+            public float moveScore;
+            public GameNode moveOnlyNode;
+            public string sourceMove;
+        }
+
+        public IEnumerator MakeDecisionCorroutine(MonoBehaviour mono, bool allowMove = true, bool allowSkill = true)
         {
             float startTime = Time.realtimeSinceStartup;
 
-            EvaluateSkill(allowSkill, out float skillBestScore,
+            SkillEvaluationResult skillResult = default;
+            yield return mono.StartCoroutine(SkillEvaluateCorroutine(allowSkill, r => skillResult = r));
+            MoveAndSkillEvaluateResult moveAndSkillResult = default;
+            yield return mono.StartCoroutine(MoveAndSkillEvaluateCorroutine(allowMove, allowSkill, 
+                r => moveAndSkillResult = r));
+            MoveEvaluateResult moveResult = default;
+            yield return mono.StartCoroutine(MoveEvaluateCorroutine(allowMove, allowSkill, r => moveResult = r));
+
+            float ORIGIN_SKILL_BONUS = utilityAI.ORIGIN_SKILL_BONUS;
+            float MOVE_SKILL_BONUS = utilityAI.MOVE_SKILL_BONUS;
+            float MOVE_ONLY_BONUS = utilityAI.MOVE_ONLY_BONUS;
+
+            float finalOriginSkillScore = skillResult.skillScore + ORIGIN_SKILL_BONUS;
+            float finalMoveSkillScore = moveAndSkillResult.skillScore + MOVE_SKILL_BONUS;
+            float finalMoveScore = moveResult.moveScore + MOVE_ONLY_BONUS;
+
+            float bestFinalScore = finalOriginSkillScore;
+            Decision decision = Decision.OriginCastSkill;
+
+            if (finalMoveSkillScore > bestFinalScore)
+            {
+                bestFinalScore = finalMoveSkillScore;
+                decision = Decision.MoveAndCastSkill;
+            }
+            if (finalMoveScore > bestFinalScore)
+            {
+                bestFinalScore = finalMoveScore;
+                decision = Decision.Move;
+            }
+
+            string executeLog = "";
+            if (decision == Decision.OriginCastSkill)
+            {
+                skill = skillResult.originSkill;
+                moveNode = skillResult.skillCastNode;
+                skillTargetNode = skillResult.originSkillTargetNode;
+
+                if (skillResult.originSkill != null && skillResult.originSkillTargetNode != null)
+                {
+                    executeLog =
+                    $"Decision: Origin Cast Skill, " +
+                    $"Execute Option: {skillResult.sourceSkill}, " +
+                    $"Skill: {skill.skillName} at {skillTargetNode.GetNodeVectorInt()}";
+                }
+            }
+            else if (decision == Decision.MoveAndCastSkill)
+            {
+                skill = moveAndSkillResult.moveSkill;
+                moveNode = moveAndSkillResult.moveSkillMoveNode;
+                skillTargetNode = moveAndSkillResult.moveSkillTargetNode;
+
+                executeLog =
+                    $"Decision: Move And Cast Skill, " +
+                    $"Execute Option: {moveAndSkillResult.sourceMoveAndSkill}, " +
+                    $"Move: {moveNode.GetNodeVectorInt()}, " +
+                    $"Skill: {skill.skillName} at {skillTargetNode.GetNodeVectorInt()}";
+            }
+            else if (decision == Decision.Move)
+            {
+                skill = null;
+                moveNode = moveResult.moveOnlyNode;
+                skillTargetNode = null;
+
+                if (moveNode != null)
+                {
+                    executeLog =
+                        $"Decision: Move, " +
+                        $"Execute Option: {moveResult.sourceMove}, " +
+                        $"Move: {moveNode.GetNodeVectorInt()}";
+                }
+            }
+
+            Orientation orientation = decisionMaker.selfOrientation;
+            if (moveNode == null)
+                yield return mono.StartCoroutine(OrientationEvaluateCorroutine(moveNode, o => orientation = o));
+            else
+                yield return mono.StartCoroutine(OrientationEvaluateCorroutine(decisionMaker.currentNode, o => orientation = o));
+
+            pathCostCache.Clear();  //Release historical path cache
+
+            float endTime = Time.realtimeSinceStartup;
+
+            if (debugMode)
+                Debug.Log($"<color=green>[Make Decision]</color> " +
+                    $"{decisionMaker.data.characterName}, " +
+                    $"{executeLog}, " +
+                    $" completed in {endTime - startTime:F4} seconds");
+        }
+
+        private IEnumerator SkillEvaluateCorroutine(bool allowSkill, Action<SkillEvaluationResult> onComplete)
+        {
+            SkillEvaluate(allowSkill, out float skillBestScore,
+            out SkillData originSkill, out GameNode skillCastNode,
+            out GameNode originSkillTargetNode,
+            out string sourceSkill);
+
+            yield return null;
+
+            SkillEvaluationResult result = new SkillEvaluationResult
+            {
+                skillScore = skillBestScore,
+                originSkill = originSkill,
+                skillCastNode = skillCastNode,
+                originSkillTargetNode = originSkillTargetNode,
+                sourceSkill = sourceSkill
+            };
+
+            onComplete?.Invoke(result);
+        }
+        private IEnumerator MoveAndSkillEvaluateCorroutine(bool allowMove, bool allowSkill, 
+            Action<MoveAndSkillEvaluateResult> onComplete)
+        {
+            MoveAndSkillEvaluate(allowMove, allowSkill, out float moveAndSkillBestScore,
+                out SkillData moveSkill, out GameNode moveSkillMoveNode, out GameNode moveSkillTargetNode, out string source);
+            yield return null;
+
+            MoveAndSkillEvaluateResult result = new MoveAndSkillEvaluateResult()
+            {
+                skillScore = moveAndSkillBestScore,
+                moveSkill = moveSkill,
+                moveSkillMoveNode = moveSkillMoveNode,
+                moveSkillTargetNode = moveSkillTargetNode,
+                sourceMoveAndSkill = source
+            };
+
+            onComplete?.Invoke(result);
+        }
+        private IEnumerator MoveEvaluateCorroutine(bool allowMove, bool allowSkill, Action<MoveEvaluateResult> onComplete)
+        {
+            MoveEvaluate(allowMove, allowSkill, out float moveBestScore,
+                out GameNode moveOnlyNode, out string sourceMove);
+            yield return null;
+
+            MoveEvaluateResult result = new MoveEvaluateResult()
+            {
+                moveScore = moveBestScore,
+                moveOnlyNode = moveOnlyNode,
+                sourceMove = sourceMove
+            };
+            onComplete?.Invoke(result);
+        }
+        private IEnumerator OrientationEvaluateCorroutine(GameNode node, Action<Orientation> onComplete)
+        {
+            OrientationEvaluate(node, out orientation);
+            yield return null;
+            onComplete?.Invoke(orientation);
+        }
+
+        public void MakeDecision(bool allowMove = true, bool allowSkill = true)
+        {
+            float startTime = Time.realtimeSinceStartup;
+            
+            SkillEvaluate(allowSkill, out float skillBestScore,
                 out SkillData originSkill, out GameNode skillCastNode,
                 out GameNode originSkillTargetNode,
                 out string sourceSkill);
 
-            EvaluateMoveAndSkill(allowMove, allowSkill, out float moveAndSkillBestScore,
+            MoveAndSkillEvaluate(allowMove, allowSkill, out float moveAndSkillBestScore,
                 out SkillData moveSkill, out GameNode moveSkillMoveNode,
                 out GameNode moveSkillTargetNode, out string sourceMoveAndSkill);
 
-            EvaluateMove(allowMove, allowSkill, out float moveBestScore,
+            MoveEvaluate(allowMove, allowSkill, out float moveBestScore,
                 out GameNode moveOnlyNode, out string sourceMove);
 
             float ORIGIN_SKILL_BONUS = utilityAI.ORIGIN_SKILL_BONUS;
@@ -178,9 +360,9 @@ namespace Tactics.AI
 
             Orientation orientation = decisionMaker.selfOrientation;
             if (moveNode == null)
-                EvaluateOrientation(decisionMaker.currentNode, ref orientation);
+                OrientationEvaluate(decisionMaker.currentNode, out orientation);
             else
-                EvaluateOrientation(moveNode, ref orientation);
+                OrientationEvaluate(moveNode, out orientation);
             this.orientation = orientation;
             
             pathCostCache.Clear();  //Release historical path cache
@@ -207,7 +389,7 @@ namespace Tactics.AI
         }
 
         #region Evaluation Methods
-        private void EvaluateSkill(bool allowSkill, out float skillBestScore,
+        private void SkillEvaluate(bool allowSkill, out float skillBestScore,
             out SkillData originSkill, out GameNode skillCastNode,
             out GameNode originSkillTargetNode,
             out string source)
@@ -228,7 +410,7 @@ namespace Tactics.AI
                 source = "Evaluate Origin Skill Option";
             }
         }
-        private void EvaluateMoveAndSkill(bool allowMove, bool allowSkill,
+        private void MoveAndSkillEvaluate(bool allowMove, bool allowSkill,
             out float moveAndSkillBestScore, out SkillData moveSkill,
             out GameNode moveSkillMoveNode, out GameNode moveSkillTargetNode,
             out string source)
@@ -249,7 +431,7 @@ namespace Tactics.AI
                 source = "Evaluate Move And Skill Option";
             }
         }
-        private void EvaluateMove(bool allowMove, bool allowSkill,
+        private void MoveEvaluate(bool allowMove, bool allowSkill,
             out float moveBestScore, out GameNode moveOnlyNode,
             out string soure)
         {
@@ -273,9 +455,11 @@ namespace Tactics.AI
                 soure = "Evaluate Move Option";
             }
         }
-        private void EvaluateOrientation(GameNode originNode, ref Orientation bestOrientation)
+        private void OrientationEvaluate(GameNode node, out Orientation bestOrientation)
         {
+            bestOrientation = decisionMaker.selfOrientation;
             float bestOrientationScore = int.MinValue;
+
             Orientation[] orientations =
             {
                 Orientation.right,
@@ -292,7 +476,7 @@ namespace Tactics.AI
                 float score = 0;
                 foreach (var rule in orientationRule)
                 {
-                    score += rule.CalculateOrientationScore(decisionMaker, opposites, originNode, orientation);
+                    score += rule.CalculateOrientationScore(decisionMaker, opposites, node, orientation);
                 }
 
                 if (score > bestOrientationScore)
@@ -449,9 +633,9 @@ namespace Tactics.AI
             CharacterSkillInfluenceNodes characterSkillInfluenceNodes =
                 new CharacterSkillInfluenceNodes(this, opposites, teammates);
 
+            List<GameNode> movableNodes = decisionMaker.GetMovableNodes();
             foreach (CharacterBase targetCharacter in mapCharactersExceptSelf)
             {
-                List<GameNode> movableNodes = decisionMaker.GetMovableNodes();
                 List<GameNode> targetAroundNodes = GetTargetAroundNodes(targetCharacter);
 
                 if (targetAroundNodes == null || targetAroundNodes.Count == 0) continue;
@@ -769,13 +953,13 @@ namespace Tactics.AI
             Dictionary<SkillData, HashSet<GameNode>> skillCanAttackSet = new Dictionary<SkillData, HashSet<GameNode>>();
 
             int currentMental = opposite.currentMental;
+            List<GameNode> oppositeMovableNodes = opposite.GetMovableNodes();
 
             foreach (var skill in opposite.skillDatas)
             {
                 if (skill.MPAmount > currentMental) continue;
                 if (skill.skillTargetType != SkillTargetType.Opposite) continue;
 
-                List<GameNode> oppositeMovableNodes = opposite.GetMovableNodes();
                 HashSet<GameNode> canAttackNodes = new HashSet<GameNode>();
 
                 foreach (var fromNode in oppositeMovableNodes)
@@ -797,16 +981,16 @@ namespace Tactics.AI
             Dictionary<SkillData, HashSet<GameNode>> skillCanSupportSet = new Dictionary<SkillData, HashSet<GameNode>>();
 
             int currentMental = teammate.currentMental;
+            List<GameNode> teammateMovableNodes = teammate.GetMovableNodes();
 
             foreach (var skill in teammate.skillDatas)
             {
                 if (currentMental > skill.MPAmount) continue;
                 if (skill.skillTargetType == SkillTargetType.Opposite) continue;
 
-                List<GameNode> oppositeMovableNodes = teammate.GetMovableNodes();
                 HashSet<GameNode> canAttackNodes = new HashSet<GameNode>();
 
-                foreach (var fromNode in oppositeMovableNodes)
+                foreach (var fromNode in teammateMovableNodes)
                 {
                     List<GameNode> skillScope = teammate.GetSkillRangeFromNode(skill, fromNode);
 

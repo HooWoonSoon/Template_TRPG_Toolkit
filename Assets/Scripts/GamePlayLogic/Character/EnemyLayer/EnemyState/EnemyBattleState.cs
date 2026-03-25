@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using UnityEngine;
 public enum AgentBattlePhase
 {
@@ -148,26 +149,42 @@ public class EnemyBattleState : EnemyBaseState
                 skillCastConfirmed = false;
                 break;
             case AgentBattlePhase.Thinking:
-                try
+                freezeState = true;
+                Thinking(character, true, true, () =>
                 {
-                    freezeState = true;
-                    Thinking(true, true, () =>
-                    {
-                        CameraController.instance.ChangeFollowTarget(character.transform);
-                        character.decisionSystem.GetResult(out currentSkill, out confirmMoveNode,
-                        out targetNode, out orientation);
+                    CameraController.instance.ChangeFollowTarget(character.transform);
 
-                        if (confirmMoveNode != null)
-                        {
-                            character.SetPathRoute(confirmMoveNode);
-                        }
-                    });
-                }
-                finally
-                {
+                    character.decisionSystem.GetResult(out currentSkill, out confirmMoveNode,
+                    out targetNode, out orientation);
+
+                    if (confirmMoveNode != null)
+                    {
+                        character.SetPathRoute(confirmMoveNode);
+                    }
+
                     freezeState = false;
-                }
+                });
                 break;
+            //try
+            //{
+            //freezeState = true;
+            //Thinking(true, true, () =>
+            //{
+            //    CameraController.instance.ChangeFollowTarget(character.transform);
+            //    character.decisionSystem.GetResult(out currentSkill, out confirmMoveNode,
+            //    out targetNode, out orientation);
+
+            //    if (confirmMoveNode != null)
+            //    {
+            //        character.SetPathRoute(confirmMoveNode);
+            //    }
+            //});
+            //}
+            //finally
+            //{
+            //    freezeState = false;
+            //}
+            //break;
             case AgentBattlePhase.ReleaseMoveThinking:
                 try
                 {
@@ -227,6 +244,18 @@ public class EnemyBattleState : EnemyBaseState
     public void Thinking(bool allowMove = true, bool allowSkill = true, Action onFinish = null)
     {
         character.decisionSystem.MakeDecision(allowMove, allowSkill);
+        onFinish?.Invoke();
+    }
+
+    public void Thinking(MonoBehaviour mono, bool allowMove = true, bool allowSkill = true, Action onFinish = null)
+    {
+        mono.StartCoroutine(ThinkingRoutine(mono, allowMove, allowSkill, onFinish));
+    }
+
+    private IEnumerator ThinkingRoutine(MonoBehaviour mono, bool allowMove, bool allowSkill, Action onFinish)
+    {
+        yield return mono.StartCoroutine(character.decisionSystem.MakeDecisionCorroutine(mono, allowMove, allowSkill));
+
         onFinish?.Invoke();
     }
 }

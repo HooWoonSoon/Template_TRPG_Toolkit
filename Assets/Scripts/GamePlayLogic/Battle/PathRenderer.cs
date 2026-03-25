@@ -15,6 +15,15 @@ public class PathRenderer : MonoBehaviour
             lineRenderer.SetPosition(i, pathVectorList[i] + offset);
         }
     }
+    public void RenderPath(List<Vector3Int> pathVectorList)
+    {
+        lineRenderer.enabled = true;
+        lineRenderer.positionCount = pathVectorList.Count;
+        for (int i = 0; i < pathVectorList.Count; i++)
+        {
+            lineRenderer.SetPosition(i, pathVectorList[i] + offset);
+        }
+    }
 
     public void ClearPath()
     {

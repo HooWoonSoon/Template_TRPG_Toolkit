@@ -1,6 +1,10 @@
 ﻿using System.Collections.Generic;
 using Tactics.AI;
+using Unity.Collections;
 using UnityEngine;
+using Unity.Mathematics;
+using Unity.Jobs;
+
 public class MoveTargetRule : ScoreRuleBase
 {
     public MoveTargetRule(DecisionSystem decisionSystem, UtilityAIScoreConfig utilityAI, List<IScoreRule> scoreSubRules, 
@@ -18,6 +22,7 @@ public class MoveTargetRule : ScoreRuleBase
         float startTime = Time.realtimeSinceStartup;
 
         PathFinding pathFinding = decisionSystem.pathFinding;
+        PathFindingJobThread pathFindingJobThread = decisionSystem.pathFindingJobThread;
         CharacterData data = character.data;
         //  No Join the Rule
         if (data == null) return 0;
@@ -28,17 +33,30 @@ public class MoveTargetRule : ScoreRuleBase
             return 0;
 
         int bestCost = int.MaxValue;
-        GameNode bestTargetNode = null;
 
+        //  Job Thread
+
+        //List<PathRoute> routes = pathFindingJobThread.GetBatchPathRouteJob(moveNode, targetAroundNodes, character, 1, 1);
+        //foreach (var route in routes)
+        //{
+        //    int cost = route.pathNodeVectorList.Count;
+        //    if (cost < bestCost)
+        //    {
+        //        bestCost = cost;
+        //    }
+        //}
+
+        //bestCost = pathFindingJobThread.FindRoutesBestScore(moveNode, targetAroundNodes, character, 1, 1);
+
+        //  Main Thread
         foreach (var targetNode in targetAroundNodes)
         {
-            int cost = decisionSystem.GetCachedPathCost(moveNode, 
+            int cost = decisionSystem.GetCachedPathCost(moveNode,
                 targetNode, character, 1, 1);
 
             if (cost < bestCost)
             {
                 bestCost = cost;
-                bestTargetNode = targetNode;
             }
         }
 
@@ -90,7 +108,7 @@ public class MoveTargetRule : ScoreRuleBase
                 $"StartNode: {character.currentNode.GetNodeVectorInt()}, " +
                 $"MoveNode: {moveNode.GetNodeVectorInt()}, " +
                 $"Route actual cost: {bestCost}, " +
-                $"TargetNode: {bestTargetNode.GetNodeVectorInt()}, " +
+                //$"TargetNode: {bestTargetNode.GetNodeVectorInt()}, " +
                 $"get Score bonus: {score}, " +
                 $"Rule completed in {endTime - startTime:F4} seconds");
         return score;

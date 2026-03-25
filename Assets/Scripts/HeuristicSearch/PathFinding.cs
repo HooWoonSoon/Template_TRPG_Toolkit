@@ -28,7 +28,7 @@ public class PathFinding
         GameNode startNode = world.GetNode(startWorldX, startWorldY, startWorldZ);
         GameNode endNode = world.GetNode(endWorldX, endWorldY, endWorldZ);
 
-        if (NodeDistance(startNode, endNode) > 200) 
+        if (NodeDistance(startNode, endNode) > 200)
         {
             Debug.Log("Pathfinding distance too long");
             return ret;
@@ -51,6 +51,8 @@ public class PathFinding
         startNode.hCost = CalculateDistanceCost(startNode, endNode);
         startNode.CalculateFCost();
 
+        List<Vector3Int> directions = GetNeighbourDirection(riseLimit, lowerLimit);
+
         while (openList.Count > 0)
         {
             GameNode currentNode = GetLowestFCostNode(openList);
@@ -64,72 +66,87 @@ public class PathFinding
             openList.Remove(currentNode);
             closedList.Add(currentNode);
 
-            foreach (GameNode neighbourNode in GetNeighbourList(currentNode, riseLimit, lowerLimit))
+            foreach (var direction in directions)
             {
-                if (closedList.Contains(neighbourNode)) continue;
-
-                if (!neighbourNode.isWalkable)
+                Vector3Int neighbourPos = new Vector3Int(currentNode.x, currentNode.y, currentNode.z) + direction;
+                if (world.loadedNodes.TryGetValue(neighbourPos, out GameNode neighbourNode))
                 {
-                    closedList.Add(neighbourNode);
-                    continue;
-                }
+                    if (direction.x != 0 && direction.z != 0)
+                    {
+                        //  To prevent the empty two slide then process diagonal walk cross
+                        Vector3Int horizontalPos = currentNode.GetNodeVectorInt() + new Vector3Int(direction.x, 0, 0);
+                        Vector3Int verticalPos = currentNode.GetNodeVectorInt() + new Vector3Int(0, 0, direction.z);
 
-                CharacterBase neighbourCharacter = neighbourNode.GetUnitGridCharacter();
-                if (pathfinder != null && neighbourCharacter != null)
-                {
-                    //  pathfinder has no team, cannot pass through any character
-                    if (pathfinder.currentTeam == null)
+                        if (!world.loadedNodes.ContainsKey(horizontalPos) ||
+                            !world.loadedNodes.ContainsKey(verticalPos))
+                            continue;
+                    }
+
+                    if (closedList.Contains(neighbourNode)) continue;
+
+                    if (!neighbourNode.isWalkable)
                     {
                         closedList.Add(neighbourNode);
                         continue;
                     }
 
-                    //  neighbour has no team, cannot pass through
-                    if (neighbourCharacter.currentTeam == null)
+                    CharacterBase neighbourCharacter = neighbourNode.GetUnitGridCharacter();
+                    if (pathfinder != null && neighbourCharacter != null)
                     {
-                        closedList.Add(neighbourNode);
-                        continue;
+                        //  pathfinder has no team, cannot pass through any character
+                        if (pathfinder.currentTeam == null)
+                        {
+                            closedList.Add(neighbourNode);
+                            continue;
+                        }
+
+                        //  neighbour has no team, cannot pass through
+                        if (neighbourCharacter.currentTeam == null)
+                        {
+                            closedList.Add(neighbourNode);
+                            continue;
+                        }
+
+                        //  cannot pass through different team character
+                        if (pathfinder.currentTeam.teamType != neighbourCharacter.currentTeam.teamType)
+                        {
+                            closedList.Add(neighbourNode);
+                            continue;
+                        }
                     }
 
-                    //  cannot pass through different team character
-                    if (pathfinder.currentTeam.teamType != neighbourCharacter.currentTeam.teamType)
+                    Vector3Int offset = neighbourNode.GetNodeVectorInt() - currentNode.GetNodeVectorInt();
+                    bool isDiagnols = Mathf.Abs(offset.x) + Mathf.Abs(offset.z) > 1;
+
+                    if (isDiagnols)
                     {
-                        closedList.Add(neighbourNode);
-                        continue;
+                        Vector3Int horizontalPos = new Vector3Int(currentNode.x + offset.x, currentNode.y, currentNode.z);
+                        Vector3Int verticalPos = new Vector3Int(currentNode.x, currentNode.y, currentNode.z + offset.z);
+
+                        world.loadedNodes.TryGetValue(horizontalPos, out GameNode horizontalNode);
+                        world.loadedNodes.TryGetValue(verticalPos, out GameNode verticalNode);
+
+                        bool horizontalBlocked = CheckBlockNode(pathfinder, horizontalNode);
+                        bool verticalBlocked = CheckBlockNode(pathfinder, verticalNode);
+
+                        if (horizontalBlocked && verticalBlocked)
+                        {
+                            closedList.Add(neighbourNode);
+                            continue;
+                        }
                     }
-                }
-                
-                Vector3Int offset = neighbourNode.GetNodeVectorInt() - currentNode.GetNodeVectorInt();
-                bool isDiagnols = Mathf.Abs(offset.x) + Mathf.Abs(offset.z) > 1;
 
-                if (isDiagnols)
-                {
-                    Vector3Int horizontalPos = new Vector3Int(currentNode.x + offset.x, currentNode.y, currentNode.z);
-                    Vector3Int verticalPos = new Vector3Int(currentNode.x, currentNode.y, currentNode.z + offset.z);
-
-                    world.loadedNodes.TryGetValue(horizontalPos, out GameNode horizontalNode);
-                    world.loadedNodes.TryGetValue(verticalPos, out GameNode verticalNode);
-
-                    bool horizontalBlocked = CheckBlockNode(pathfinder, horizontalNode);
-                    bool verticalBlocked = CheckBlockNode(pathfinder, verticalNode);
-
-                    if (horizontalBlocked && verticalBlocked)
+                    int tentativeGCost = currentNode.gCost + CalculateDistanceCost(currentNode, neighbourNode);
+                    if (tentativeGCost < neighbourNode.gCost)
                     {
-                        closedList.Add(neighbourNode);
-                        continue;
+                        neighbourNode.cameFromNode = currentNode;
+                        neighbourNode.gCost = tentativeGCost;
+                        neighbourNode.hCost = CalculateDistanceCost(neighbourNode, endNode);
+                        neighbourNode.CalculateFCost();
+
+                        if (!openList.Contains(neighbourNode))
+                            openList.Add(neighbourNode);
                     }
-                }
-
-                int tentativeGCost = currentNode.gCost + CalculateDistanceCost(currentNode, neighbourNode);
-                if (tentativeGCost < neighbourNode.gCost)
-                {
-                    neighbourNode.cameFromNode = currentNode;
-                    neighbourNode.gCost = tentativeGCost;
-                    neighbourNode.hCost = CalculateDistanceCost(neighbourNode, endNode);
-                    neighbourNode.CalculateFCost();
-
-                    if (!openList.Contains(neighbourNode))
-                        openList.Add(neighbourNode);
                 }
             }
         }
@@ -191,10 +208,8 @@ public class PathFinding
         return path;
     }
 
-    private List<GameNode> GetNeighbourList(GameNode currentNode, int riseLimit, int lowerLimit)
+    private List<Vector3Int> GetNeighbourDirection(int riseLimit, int lowerLimit)
     {
-        List<GameNode> neighbourList = new List<GameNode>();
-
         List<Vector3Int> directions = new List<Vector3Int>
         {
             new Vector3Int(-1, 0, 0), // Left
@@ -230,6 +245,12 @@ public class PathFinding
             new Vector3Int(0, -y, -1)
         });
         }
+
+        return directions;
+    }
+    private List<GameNode> GetNeighbourList(GameNode currentNode, List<Vector3Int> directions)
+    {
+        List<GameNode> neighbourList = new List<GameNode>();
 
         foreach (var direction in directions)
         {
@@ -321,7 +342,7 @@ public class PathFinding
     {
         SetProcessPath(start, end, pathFinder, riseLimit, lowerLimit);
         if (processedPath.Count == 0) return null;
-        return new PathRoute(processedPath, start);
+        return new PathRoute(processedPath);
     }
     public int GetTargetNodeCost(GameNode startNode, GameNode endNode, 
         CharacterBase pathFinder, int riseLimit, int lowerLimit)
@@ -420,12 +441,14 @@ public class PathFinding
         List<GameNode> openList = new List<GameNode> { startNode };
         List<GameNode> calcualtedNode = new List<GameNode> { startNode };
 
+        List<Vector3Int> directions = GetNeighbourDirection(riseLimit, lowerLimit);
+
         while (openList.Count > 0)
         {
             GameNode currentNode = openList[0];
             openList.RemoveAt(0);
 
-            List<GameNode> neighbourNodes = GetNeighbourList(currentNode, riseLimit, lowerLimit);
+            List<GameNode> neighbourNodes = GetNeighbourList(currentNode, directions);
             foreach (GameNode neighbourNode in neighbourNodes)
             {
                 if (!neighbourNode.isWalkable) { continue; }
@@ -487,12 +510,14 @@ public class PathFinding
         List<GameNode> openList = new List<GameNode> { startNode };
         List<GameNode> calcualtedNodes = new List<GameNode> { startNode };
 
+        List<Vector3Int> directions = GetNeighbourDirection(riseLimit, lowerLimit);
+
         while (openList.Count > 0)
         {
             GameNode currentNode = openList[0];
             openList.RemoveAt(0);
 
-            List<GameNode> neighbourNodes = GetNeighbourList(currentNode, riseLimit, lowerLimit);
+            List<GameNode> neighbourNodes = GetNeighbourList(currentNode, directions);
 
             foreach (GameNode neighbourNode in neighbourNodes)
             {

@@ -91,6 +91,7 @@ public class BattleManager : Entity
     #region Battle Unit Refine Path
     private void EnterBattleUnitRefinePath()
     {
+        //pathFindingJobThread.Initialize();
         List<PathRoute> pathRoutes = GetBattleUnitRefinePath();
 
         for (int i = 0; i < joinedBattleUnits.Count; i++)
@@ -338,9 +339,9 @@ public class BattleManager : Entity
     #region Path Line Gizmos
     public void ShowPathLine(CharacterBase character, Vector3 start, Vector3 end)
     {
-        if (pathRenderer == null) 
-        { 
-            Debug.LogWarning("Path Renderer is null!"); return; 
+        if (pathRenderer == null)
+        {
+            Debug.LogWarning("Path Renderer is null!"); return;
         }
         PathRoute pathRoute = pathFinding.GetPathRoute(start, end, character, 1, 1);
         if (pathRoute == null)
@@ -356,6 +357,23 @@ public class BattleManager : Entity
             return;
         }
         pathRenderer.RenderPath(pathRoute.pathNodeVectorList);
+
+        //Testing
+        //pathFindingJobThread.Initialize();
+        //PathRoute pathRoute = pathFindingJobThread.GetPathRoute(start, end, character, 1, 1);
+        //if (pathRoute == null)
+        //{
+        //    Debug.LogWarning("PathRoute is null!");
+        //    pathRenderer.ClearPath();
+        //    return;
+        //}
+        //if (pathRoute.pathNodeVectorList == null || pathRoute.pathNodeVectorList.Count == 0)
+        //{
+        //    Debug.LogWarning("PathNode Vector List is null or empty!");
+        //    pathRenderer.ClearPath();
+        //    return;
+        //}
+        //pathRenderer.RenderPath(pathRoute.pathNodeVectorList);
     }
     public void ClosePathLine()
     {
