@@ -46,8 +46,6 @@ public class MoveTargetRule : ScoreRuleBase
         //    }
         //}
 
-        //bestCost = pathFindingJobThread.FindRoutesBestScore(moveNode, targetAroundNodes, character, 1, 1);
-
         //  Main Thread
         foreach (var targetNode in targetAroundNodes)
         {

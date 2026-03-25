@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Collections;
 using UnityEngine;
+using System.Collections;
 public enum AgentBattlePhase
 {
     Ready, Wait, Thinking, Move, SkillCast,
@@ -149,62 +149,10 @@ public class EnemyBattleState : EnemyBaseState
                 skillCastConfirmed = false;
                 break;
             case AgentBattlePhase.Thinking:
-                freezeState = true;
-                Thinking(character, true, true, () =>
-                {
-                    CameraController.instance.ChangeFollowTarget(character.transform);
-
-                    character.decisionSystem.GetResult(out currentSkill, out confirmMoveNode,
-                    out targetNode, out orientation);
-
-                    if (confirmMoveNode != null)
-                    {
-                        character.SetPathRoute(confirmMoveNode);
-                    }
-
-                    freezeState = false;
-                });
+                FreezeTillThinkingComplete();
                 break;
-            //try
-            //{
-            //freezeState = true;
-            //Thinking(true, true, () =>
-            //{
-            //    CameraController.instance.ChangeFollowTarget(character.transform);
-            //    character.decisionSystem.GetResult(out currentSkill, out confirmMoveNode,
-            //    out targetNode, out orientation);
-
-            //    if (confirmMoveNode != null)
-            //    {
-            //        character.SetPathRoute(confirmMoveNode);
-            //    }
-            //});
-            //}
-            //finally
-            //{
-            //    freezeState = false;
-            //}
-            //break;
             case AgentBattlePhase.ReleaseMoveThinking:
-                try
-                {
-                    freezeState = true;
-                    Thinking(true, false, () =>
-                    {
-                        CameraController.instance.ChangeFollowTarget(character.transform);
-                        character.decisionSystem.GetResult(out currentSkill, out confirmMoveNode, 
-                            out targetNode, out orientation);
-
-                        if (confirmMoveNode != null)
-                        {
-                            character.SetPathRoute(confirmMoveNode);
-                        }
-                    });
-                }
-                finally
-                {
-                    freezeState = false;
-                }
+                FreezeTillThinkingComplete(true, false);
                 break;
             case AgentBattlePhase.Move:
                 if (confirmMoveNode != null)
@@ -218,7 +166,7 @@ public class EnemyBattleState : EnemyBaseState
                 {
                     freezeState = true;
                     character.ShowSkillTargetTilemap(character.currentNode, targetNode, currentSkill);
-                    BattleManager.instance.CastSkill(character, currentSkill, confirmMoveNode, 
+                    BattleManager.instance.CastSkill(character, currentSkill, confirmMoveNode,
                         targetNode, () => { freezeState = false; });
                 }
                 break;
@@ -226,7 +174,7 @@ public class EnemyBattleState : EnemyBaseState
                 freezeState = true;
                 character.ResetVisualTilemap();
                 BattleManager.instance.SetupOrientationArrow(character, character.currentNode);
-                BattleManager.instance.SwitchToOrientationWithArrow(character, orientation, 0.05f, 
+                BattleManager.instance.SwitchToOrientationWithArrow(character, orientation, 0.05f,
                     () => { freezeState = false; });
                 break;
         }
@@ -241,17 +189,28 @@ public class EnemyBattleState : EnemyBaseState
         }
     }
 
-    public void Thinking(bool allowMove = true, bool allowSkill = true, Action onFinish = null)
+    private void FreezeTillThinkingComplete(bool allowMove = true, bool allowSkill = true)
     {
-        character.decisionSystem.MakeDecision(allowMove, allowSkill);
-        onFinish?.Invoke();
-    }
+        freezeState = true;
+        Thinking(character, allowMove, allowSkill, () =>
+        {
+            CameraController.instance.ChangeFollowTarget(character.transform);
 
+            character.decisionSystem.GetResult(out currentSkill, out confirmMoveNode,
+            out targetNode, out orientation);
+
+            if (confirmMoveNode != null)
+            {
+                character.SetPathRoute(confirmMoveNode);
+            }
+
+            freezeState = false;
+        });
+    }
     public void Thinking(MonoBehaviour mono, bool allowMove = true, bool allowSkill = true, Action onFinish = null)
     {
         mono.StartCoroutine(ThinkingRoutine(mono, allowMove, allowSkill, onFinish));
     }
-
     private IEnumerator ThinkingRoutine(MonoBehaviour mono, bool allowMove, bool allowSkill, Action onFinish)
     {
         yield return mono.StartCoroutine(character.decisionSystem.MakeDecisionCorroutine(mono, allowMove, allowSkill));
