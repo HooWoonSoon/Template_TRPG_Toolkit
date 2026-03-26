@@ -13,6 +13,15 @@ public class Parabola
         this.debugMode = debugMode;
     }
 
+    public List<UnitDetectable> GetParabolaHitUnits(UnitDetectable projectileDetectable,
+        Vector3 start, Vector3 target, int elevationAngle,
+        List<UnitDetectable> ingoreUnits)
+    {
+        List<UnitDetectable> collectedUnits = new List<UnitDetectable>();
+        ParabolaHitUnitInternel(projectileDetectable, start,
+            target, elevationAngle, collectedUnits, ingoreUnits);
+        return collectedUnits;
+    }
     public List<UnitDetectable> GetParabolaHitUnits(UnitDetectable projectileDetectable, 
         GameNode start, GameNode target, int elevationAngle, 
         List<UnitDetectable> ingoreUnits)
@@ -83,8 +92,11 @@ public class Parabola
             if (direction != Vector3.zero)
             {
                 Quaternion rotation = Quaternion.LookRotation(direction);
-                Bounds projectileBound = projectileDetectable.GetRotatedBounds
-                    (nextPoint, rotation, center, size);
+                Bounds projectileBound = projectileDetectable.GetBounds
+                    (nextPoint, rotation, center, size, out Vector3[] corners);
+
+                if (i % 5 == 0)
+                    Debug.DrawCube(corners, Color.red, 1.5f);
 
                 if (world.CheckSolidNodeBound(projectileBound))
                 {
@@ -94,15 +106,20 @@ public class Parabola
                 }
 
                 UnitDetectable unit = GetHitUnitDetectable(projectileBound);
+
                 if (unit != null && (ingoreUnits == null || !ingoreUnits.Contains(unit)))
                 {
                     if (collections == null)
+                    {
+                        // Debug.Log($"Target: {target}, Detected: {unit.GetComponent<CharacterBase>()} at point {nextPoint}");
                         return unit;
+                    }
 
                     if (!collections.Contains(unit))
                         collections.Add(unit);
                 }
             }
+
             previousPoint = nextPoint;
         }
         return null;
@@ -110,32 +127,19 @@ public class Parabola
 
     public UnitDetectable GetHitUnitDetectable(Bounds bounds)
     {
-        Vector3[] positions =
-        {
-            new Vector3(bounds.min.x, bounds.min.y, bounds.min.z),
-            new Vector3(bounds.max.x, bounds.min.y, bounds.min.z),
-            new Vector3(bounds.min.x, bounds.max.y, bounds.min.z),
-            new Vector3(bounds.min.x, bounds.min.y, bounds.max.z),
-            new Vector3(bounds.max.x, bounds.max.y, bounds.min.z),
-            new Vector3(bounds.max.x, bounds.min.y, bounds.max.z),
-            new Vector3(bounds.min.x, bounds.max.y, bounds.max.z),
-            new Vector3(bounds.max.x, bounds.max.y, bounds.max.z)
-        };
-
         List<UnitDetectable> unitDetectables = UnitDetectable.all;
 
         foreach (UnitDetectable unit in unitDetectables)
         {
-            Bounds selfBound = unit.GetRotatedBoundSelf();
+            Bounds selfBound = unit.GetBoundSelf();
 
-            foreach (Vector3 position in positions)
+            if (bounds.Intersects(selfBound))
             {
-                if (selfBound.Contains(position))
-                {
-                    return unit;
-                }
+                return unit;
             }
         }
         return null;
     }
+
+
 }

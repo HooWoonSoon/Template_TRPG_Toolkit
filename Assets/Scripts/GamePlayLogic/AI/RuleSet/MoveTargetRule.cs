@@ -22,7 +22,7 @@ public class MoveTargetRule : ScoreRuleBase
         float startTime = Time.realtimeSinceStartup;
 
         PathFinding pathFinding = decisionSystem.pathFinding;
-        PathFindingJobThread pathFindingJobThread = decisionSystem.pathFindingJobThread;
+        //PathFindingJobThread pathFindingJobThread = decisionSystem.pathFindingJobThread;
         CharacterData data = character.data;
         //  No Join the Rule
         if (data == null) return 0;

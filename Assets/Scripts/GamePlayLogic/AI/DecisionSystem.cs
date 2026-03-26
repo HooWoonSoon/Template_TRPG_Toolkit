@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.VisualScripting;
 using UnityEngine;
 
 namespace Tactics.AI
@@ -16,7 +17,6 @@ namespace Tactics.AI
         }
         public World world;
         public PathFinding pathFinding;
-        public PathFindingJobThread pathFindingJobThread;
         public UtilityAIScoreConfig utilityAI;
         public CharacterBase decisionMaker;
 
@@ -31,8 +31,6 @@ namespace Tactics.AI
         private GameNode moveNode;
         private GameNode skillTargetNode;
         private Orientation orientation;
-
-        private float shootOffsetHeight = 1.5f;
 
         private Dictionary<(GameNode, GameNode), int> pathCostCache
         = new Dictionary<(GameNode, GameNode), int>();
@@ -49,9 +47,6 @@ namespace Tactics.AI
 
             PathFinding pathfinding = new PathFinding(world);
             this.pathFinding = pathfinding;
-
-            PathFindingJobThread pathFindingJobThread = new PathFindingJobThread(world);
-            this.pathFindingJobThread = pathFindingJobThread;
 
             //  Move Rule
             List<IScoreRule> moveTargetSubRules = new List<IScoreRule>()
@@ -1204,22 +1199,38 @@ namespace Tactics.AI
                         decisionMaker.GetComponent<UnitDetectable>()
                     };
 
+                    CharacterBase targetCharacter = targetNode.GetUnitGridCharacter();
+                    Vector3 target = targetNode.GetNodeVector();
+                    if (targetCharacter != null)
+                        target = targetCharacter.transform.position + new Vector3(0, 1.5f, 0);
+                    
                     UnitDetectable unit = parabola.GetParabolaHitUnit
                         (projectileDetect, startNode.GetNodeVector() + 
-                        new Vector3(0, shootOffsetHeight, 0),
-                        targetNode.GetNodeVector(), 
-                        skill.initialElevationAngle, ignoreUnits);
+                        new Vector3(0, decisionMaker.shootOffsetHeight, 0),
+                        target, skill.initialElevationAngle, ignoreUnits);
 
+
+                    //List<UnitDetectable> units = parabola.GetParabolaHitUnits(projectileDetect, startNode.GetNodeVector() +
+                    //    new Vector3(0, decisionMaker.shootOffsetHeight, 0),
+                    //    target, skill.initialElevationAngle, ignoreUnits);
+
+                    Vector3 start = startNode.GetNodeVector() +
+                        new Vector3(0, decisionMaker.shootOffsetHeight, 0);
                     if (unit == null) return false;
 
-                    CharacterBase targetCharacter = targetNode.GetUnitGridCharacter();
+                    Debug.Log($"Start: {start}, Target: {target}, Detected: {unit.GetComponent<CharacterBase>()}");
+
+                    //string join = string.Join(", ", units.Select(u => u.GetComponent<CharacterBase>().name));
+                    //Debug.Log($"Target: {target}, Detected: {join}");
+
                     CharacterBase hitCharacter = unit.GetComponent<CharacterBase>();
 
                     if (hitCharacter == null) return false;
                     if (hitCharacter.currentTeam == decisionMaker.currentTeam)
                         return false;
+                    if (hitCharacter != targetCharacter) return false;
 
-                    return hitCharacter == targetCharacter;
+                    return true;
                 }
             }
             else

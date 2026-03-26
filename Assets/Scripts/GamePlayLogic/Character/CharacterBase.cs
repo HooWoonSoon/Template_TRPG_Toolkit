@@ -21,6 +21,7 @@ public abstract class CharacterBase : Entity
     public int currentHealth { get; set; }
     public int currentMental { get; set; }
     public float moveSpeed = 6f;
+    public float shootOffsetHeight = 1.5f;
 
     public GameNode currentNode { get; private set; }
     public PathRoute pathRoute { get; private set; }

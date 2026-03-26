@@ -36,7 +36,7 @@ public class Projectile : Entity
 
     private void OnHit()
     {
-        UnitDetectable[] unitDetectables = unitDetectable.OverlapSelfRange();
+        UnitDetectable[] unitDetectables = unitDetectable.OverlapOBBSelfRange();
         foreach (var unitDetectable in unitDetectables)
         {
             if (unitDetectable == excludeHitDetectable) { continue; }
@@ -374,7 +374,7 @@ public class Projectile : Entity
         foreach (var corner in corners)
         {
             Vector3 worldPoint = transform.TransformPoint(localCenter + corner);
-            Gizmos.DrawSphere(worldPoint, 0.1f);
+            Gizmos.DrawSphere(worldPoint, 0.05f);
         }
 
         Vector3[] groundChecks = new Vector3[]
@@ -393,7 +393,7 @@ public class Projectile : Entity
             Vector3 worldPoint = transform.TransformPoint(localCenter + groundCheck);
             Vector3 nextPos = new Vector3(worldPoint.x, worldPoint.y + checkYOffset, worldPoint.z);
 
-            Gizmos.DrawSphere(nextPos, 0.2f);
+            Gizmos.DrawSphere(nextPos, 0.05f);
         }
 
     }

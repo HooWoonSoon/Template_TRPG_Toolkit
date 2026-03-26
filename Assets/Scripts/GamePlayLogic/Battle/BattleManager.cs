@@ -638,7 +638,11 @@ public class BattleManager : Entity
             }
             else
             {
-                projectile.onHitCompleted += () => { isFinish = true; };
+                projectile.onHitCompleted += () => 
+                { 
+                    isFinish = true;
+                    Debug.Log($"Projectile hit in {projectile.transform.position}");
+                };
                 yield return new WaitUntil(() => isFinish);
             }
         }
@@ -713,10 +717,10 @@ public class BattleManager : Entity
         {
             if (originNode == null)
                 projectile.LaunchToTarget(selfCharacter, currentSkill, 
-                    selfCharacter.transform.position + new Vector3(0, 1.5f, 0), targetPos);
+                    selfCharacter.transform.position + new Vector3(0, selfCharacter.shootOffsetHeight, 0), targetPos);
             else
                 projectile.LaunchToTarget(selfCharacter, currentSkill,
-                    originNode.GetNodeVector() + new Vector3(0, 1.5f, 0), targetPos);
+                    originNode.GetNodeVector() + new Vector3(0, selfCharacter.shootOffsetHeight, 0), targetPos);
         }
         return projectile;
     }
@@ -760,10 +764,10 @@ public class BattleManager : Entity
     /// <summary>
     /// Setup up orientation arrow at target node position with character current orientation
     /// </summary>
-    public void SetupOrientationArrow(CharacterBase character, GameNode targetNode)
+    public void SetupOrientationArrow(bool allowControl, CharacterBase character, GameNode targetNode)
     {
         Orientation orientation = character.selfOrientation;
-        orientationArrow.ShowArrows(orientation, targetNode);
+        orientationArrow.ShowArrows(allowControl, orientation, targetNode);
     }
 
     private Orientation[] clockwiseOrder =

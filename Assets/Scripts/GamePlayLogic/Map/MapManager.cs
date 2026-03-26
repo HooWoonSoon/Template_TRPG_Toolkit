@@ -34,7 +34,6 @@ public class MapManager : MonoBehaviour
     public static MapManager instance { get; private set;}
 
     public PathFinding pathFinding { get; private set; }
-    public PathFindingJobThread pathFindingJobThread { get; private set; }
 
     private void Awake()
     {

@@ -15,7 +15,7 @@ public class MapSwitchTrigger : Entity
     public void Update()
     {
         UnitDetectable selfDetectable = GetComponentInChildren<UnitDetectable>();
-        UnitDetectable[] unitDetectables = selfDetectable.OverlapSelfRange();
+        UnitDetectable[] unitDetectables = selfDetectable.OverlapOBBSelfRange();
 
         bool leaderLeft = CheckPlayerLeaderExit(unitDetectables);
         if (leaderLeft)

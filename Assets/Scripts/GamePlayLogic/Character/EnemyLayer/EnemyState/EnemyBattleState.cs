@@ -173,7 +173,7 @@ public class EnemyBattleState : EnemyBaseState
             case AgentBattlePhase.End:
                 freezeState = true;
                 character.ResetVisualTilemap();
-                BattleManager.instance.SetupOrientationArrow(character, character.currentNode);
+                BattleManager.instance.SetupOrientationArrow(false, character, character.currentNode);
                 BattleManager.instance.SwitchToOrientationWithArrow(character, orientation, 0.05f,
                     () => { freezeState = false; });
                 break;

@@ -478,7 +478,7 @@ public class PlayerBattleState : PlayerBaseState
         character.ResetVisualTilemap();
         CameraController.instance.ChangeFollowTarget(character.transform);
         BattleManager.instance.ActivateMoveCursorAndHide(false, true);
-        BattleManager.instance.SetupOrientationArrow(character, confirmMoveNode);
+        BattleManager.instance.SetupOrientationArrow(true, character, confirmMoveNode);
         BattleManager.instance.DestroyPreviewModel();
         BattleManager.instance.ClosePathLine();
         BattleUIManager.instance.ActiveAllCharacterInfoTip(false);

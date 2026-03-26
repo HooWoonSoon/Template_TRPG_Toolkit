@@ -8,7 +8,7 @@ public class BattleOrientationArrow : MonoBehaviour
     [SerializeField] private GameObject backArrow;
 
     private GameObject[] arrows;
-    private bool activateArrow = false;
+    private bool allowControl = false;
     public Orientation currentOrientation;
 
     public Material normalMat;
@@ -16,7 +16,7 @@ public class BattleOrientationArrow : MonoBehaviour
 
     private void Update()
     {
-        if (!activateArrow) { return; }
+        if (!allowControl) { return; }
 
         Vector3 direction = Vector3.zero;
 
@@ -97,7 +97,7 @@ public class BattleOrientationArrow : MonoBehaviour
         }
     }
 
-    public void ShowArrows(Orientation orientation, GameNode targetNode, float centerOffset = 1.2f)
+    public void ShowArrows(bool allowControl, Orientation orientation, GameNode targetNode, float centerOffset = 1.2f)
     {
         arrows = new GameObject[] { frontArrow, leftArrow, rightArrow, backArrow };
         Vector3 target = targetNode.GetNodeVector();
@@ -111,7 +111,7 @@ public class BattleOrientationArrow : MonoBehaviour
         rightArrow.transform.position = target + new Vector3(centerOffset, 1f, 0);
         backArrow.SetActive(true);
         backArrow.transform.position = target + new Vector3(0, 1f, -centerOffset);
-        activateArrow = true;
+        this.allowControl = allowControl;
 
         HighlightOrientationArrow(currentOrientation);
     }
@@ -124,6 +124,6 @@ public class BattleOrientationArrow : MonoBehaviour
         }
         foreach (var arrow in arrows)
             arrow.SetActive(false);
-        activateArrow = false;
+        allowControl = false;
     }
 }
