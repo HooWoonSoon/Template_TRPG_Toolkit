@@ -17,118 +17,83 @@ public class UnitDetectable : Entity
     {
         base.Start();
     }
+    public bool CheckPositionInSelf(Vector3 position)
+    {
+        Vector3 localPos = transform.InverseTransformPoint(position);
+        Vector3 half = size * 0.5f;
+
+        if (Mathf.Abs(localPos.x - center.x) > half.x) return false;
+        if (Mathf.Abs(localPos.y - center.y) > half.y) return false;
+        if (Mathf.Abs(localPos.z - center.z) > half.z) return false;
+
+        return true;
+    }
     public UnitDetectable[] OverlapOBBSelfRange()
     {
         List<UnitDetectable> hits = new List<UnitDetectable>();
 
-        Vector3 half = size * 0.5f;
-        Vector3 localCenter = center;
-
-        Vector3[] corners = new Vector3[]
-        {
-        new Vector3(+half.x, +half.y, +half.z),
-        new Vector3(+half.x, -half.y, +half.z),
-        new Vector3(-half.x, +half.y, +half.z),
-        new Vector3(-half.x, -half.y, +half.z),
-        new Vector3(+half.x, +half.y, -half.z),
-        new Vector3(+half.x, -half.y, -half.z),
-        new Vector3(-half.x, +half.y, -half.z),
-        new Vector3(-half.x, -half.y, -half.z),
-        };
-
         foreach (UnitDetectable unit in all)
         {
             if (unit == this) continue;
 
-            Bounds otherBounds = GetBounds(
-                unit.transform.position,
-                unit.transform.rotation,
-                unit.center,
-                unit.size
-            );
-
-            foreach (var corner in corners)
-            {
-                Vector3 worldPoint = transform.TransformPoint(localCenter + corner);
-
-                if (otherBounds.Contains(worldPoint))
-                {
-                    hits.Add(unit);
-                    break;
-                }
-            }
-        }
-
-        return hits.ToArray();
-    }
-    public bool IsOBBOverlapViaCorners(UnitDetectable other)
-    {
-        Vector3[] myCorners = GetCornersWorld();
-        Vector3[] otherCorners = other.GetCornersWorld();
-
-        // self Bounds min/max
-        Vector3 minA = myCorners[0], maxA = myCorners[0];
-        for (int i = 1; i < 8; i++)
-        {
-            minA = Vector3.Min(minA, myCorners[i]);
-            maxA = Vector3.Max(maxA, myCorners[i]);
-        }
-
-        // 求对方盒子的 min/max
-        Vector3 minB = otherCorners[0], maxB = otherCorners[0];
-        for (int i = 1; i < 8; i++)
-        {
-            minB = Vector3.Min(minB, otherCorners[i]);
-            maxB = Vector3.Max(maxB, otherCorners[i]);
-        }
-
-        // 三个方向都重叠就算碰撞
-        bool overlapX = maxA.x >= minB.x && minA.x <= maxB.x;
-        bool overlapY = maxA.y >= minB.y && minA.y <= maxB.y;
-        bool overlapZ = maxA.z >= minB.z && minA.z <= maxB.z;
-
-        return overlapX && overlapY && overlapZ;
-    }
-    private Vector3[] GetCornersWorld()
-    {
-        Vector3 half = size * 0.5f;
-        Vector3[] corners = new Vector3[]
-        {
-        new Vector3(+half.x, +half.y, +half.z),
-        new Vector3(+half.x, -half.y, +half.z),
-        new Vector3(-half.x, +half.y, +half.z),
-        new Vector3(-half.x, -half.y, +half.z),
-        new Vector3(+half.x, +half.y, -half.z),
-        new Vector3(+half.x, -half.y, -half.z),
-        new Vector3(-half.x, +half.y, -half.z),
-        new Vector3(-half.x, -half.y, -half.z),
-        };
-
-        for (int i = 0; i < corners.Length; i++)
-            corners[i] = transform.TransformPoint(center + corners[i]);
-
-        return corners;
-    }
-
-    public UnitDetectable[] OverlapSelfRange()
-    {
-        List<UnitDetectable> hits = new List<UnitDetectable>();
-
-        Bounds selfBounds = GetBounds(transform.position, transform.rotation, center, size);
-
-        foreach (UnitDetectable unit in all)
-        {
-            if (unit == this) continue;
-
-            Bounds otherBounds = GetBounds(unit.transform.position, unit.transform.rotation, unit.center, unit.size);
-
-            if (selfBounds.Intersects(otherBounds))
+            if (IsOBBOverlap(this, unit))
             {
                 hits.Add(unit);
             }
         }
 
         return hits.ToArray();
+    }
+    private bool IsOBBOverlap(UnitDetectable a, UnitDetectable b)
+    {
+        Vector3 aCenter = a.transform.position + a.center;
+        Vector3 bCenter = b.transform.position + b.center;
+
+        Vector3[] aAxis = new Vector3[]
+        {
+            a.transform.right,
+            a.transform.up,
+            a.transform.forward
+        };
+
+        Vector3[] bAxis = new Vector3[]
+        {
+            b.transform.right,
+            b.transform.up,
+            b.transform.forward
+        };
+
+        Vector3 aHalf = a.size * 0.5f;
+        Vector3 bHalf = b.size * 0.5f;
+
+        Vector3 delta = bCenter - aCenter;
+
+        for (int i = 0; i < 3; i++)
+        {
+            if (!OverlapOnAxis(delta, aAxis[i], aAxis, aHalf, bAxis, bHalf))
+                return false;
+
+            if (!OverlapOnAxis(delta, bAxis[i], aAxis, aHalf, bAxis, bHalf))
+                return false;
+        }
+
+        return true;
+    }
+    private bool OverlapOnAxis(Vector3 delta, Vector3 axis, Vector3[] aAxis, Vector3 aHalf, Vector3[] bAxis, Vector3 bHalf)
+    {
+        float distance = Mathf.Abs(Vector3.Dot(delta, axis));
+
+        float aProj =
+            Mathf.Abs(Vector3.Dot(aAxis[0], axis)) * aHalf.x +
+            Mathf.Abs(Vector3.Dot(aAxis[1], axis)) * aHalf.y +
+            Mathf.Abs(Vector3.Dot(aAxis[2], axis)) * aHalf.z;
+
+        float bProj =
+            Mathf.Abs(Vector3.Dot(bAxis[0], axis)) * bHalf.x +
+            Mathf.Abs(Vector3.Dot(bAxis[1], axis)) * bHalf.y +
+            Mathf.Abs(Vector3.Dot(bAxis[2], axis)) * bHalf.z;
+
+        return distance <= (aProj + bProj);
     }
 
     public Bounds GetBoundSelf()
@@ -416,7 +381,6 @@ public class UnitDetectable : Entity
 
     private void OnDrawGizmos()
     {
-
         Gizmos.color = new Color(0, 1, 0, 0.5f);
         Matrix4x4 oldMatrix = Gizmos.matrix;
         Gizmos.matrix = Matrix4x4.TRS(transform.position, transform.rotation, Vector3.one);

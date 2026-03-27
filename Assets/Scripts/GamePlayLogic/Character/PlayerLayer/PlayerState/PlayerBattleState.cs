@@ -150,6 +150,7 @@ public class PlayerBattleState : PlayerBaseState
                     
                     if (confirmMoveNode != null)
                     {
+                        //  Trigger only projectile skill otherwise invalid
                         BattleManager.instance.ShowProjectileParabola(character, selectedSkill, confirmMoveNode, selectedNode);
                     }
 
@@ -417,6 +418,7 @@ public class PlayerBattleState : PlayerBaseState
                 SkillComandInstruction();
                 break;
             case PlayerBattlePhase.SkillCast:
+                BattleManager.instance.ActivateMoveCursorAndHide(false, true);
                 CastSkillInstruction();
                 break;
             case PlayerBattlePhase.ReleaseSkillComandEnd:

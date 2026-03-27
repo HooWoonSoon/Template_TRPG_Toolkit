@@ -5,7 +5,8 @@ public class Billboards : MonoBehaviour
 {
     [SerializeField] private Camera targetCamera;
     [SerializeField] private List<Transform> adjustedUI = new List<Transform>();
-
+    
+    public bool enbledSelfTarget = false;
     private void LateUpdate()
     {
         if (targetCamera == null)
@@ -21,5 +22,8 @@ public class Billboards : MonoBehaviour
             ui.rotation = Quaternion.Euler(cameraPitch.x, cameraPitch.y, 0f);
 
         }
+
+        if (enbledSelfTarget)
+            this.transform.rotation = Quaternion.Euler(cameraPitch.x, cameraPitch.y, 0f);
     }
 }

@@ -312,9 +312,9 @@ public class BattleManager : Entity
     }
 
     #region Cursor Gizmos
-    public void ActivateMoveCursorAndHide(bool active, bool hide)
+    public void ActivateMoveCursorAndHide(bool allowControl, bool hide)
     {
-        gridCursor.ActivateMoveCursor(active, hide);
+        gridCursor.ActivateMoveCursor(allowControl, hide);
     }
     public void SetGridCursorAt(GameNode target)
     {
@@ -406,6 +406,14 @@ public class BattleManager : Entity
 
         CharacterBase targetCharacter = targetNode.GetUnitGridCharacter();
 
+        if (characterMoveTargetNode != null && targetNode == character.currentNode)
+        {
+            targetCharacter = null;
+            Debug.LogWarning("Invalid node, character leave already");
+        }
+
+        //  If character has ready to move and his skill target node is same with his move node.
+        //  Its meant his skill target is himself.
         if (characterMoveTargetNode != null && characterMoveTargetNode == targetNode)
             targetCharacter = character;
 

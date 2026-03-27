@@ -194,6 +194,7 @@ public class EnemyBattleState : EnemyBaseState
         freezeState = true;
         Thinking(character, allowMove, allowSkill, () =>
         {
+            CameraController.instance.TriggerRotateTillTargetFollow(true);
             CameraController.instance.ChangeFollowTarget(character.transform);
 
             character.decisionSystem.GetResult(out currentSkill, out confirmMoveNode,

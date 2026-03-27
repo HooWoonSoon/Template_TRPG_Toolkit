@@ -11,6 +11,7 @@ public class UniversalUIManager : MonoBehaviour
     public TextMeshProUGUI castSkillNoticeText;
 
     public GameObject UITipGameObject;
+
     private bool forceEnableUITip = false;
     
     public bool debugMode = false;
@@ -31,7 +32,7 @@ public class UniversalUIManager : MonoBehaviour
 
     private void LateUpdate()
     {
-        UITip();
+        UITip();   
     }
 
     public void CreateText(CharacterBase character, string text)
@@ -42,10 +43,43 @@ public class UniversalUIManager : MonoBehaviour
         if (debugMode)
             Debug.Log("Generated Text");
     }
+
+    public Canvas canvasWorld;
+    public AnimationCurve scaleCurve;
+    public Material materialText;
+    public void CreateTextInWorld(CharacterBase character, string text)
+    {
+        GameObject gameObejct = new GameObject($"Text {text}", typeof(TextMeshProUGUI));
+        gameObejct.transform.SetParent(canvasWorld.transform, false);
+        gameObejct.transform.position = character.transform.position + new Vector3(0, 1, 0) ;
+        TextMeshProUGUI damangeTextUI = gameObejct.GetComponent<TextMeshProUGUI>();
+        damangeTextUI.material = materialText;
+        damangeTextUI.text = text;
+        damangeTextUI.alignment = TextAlignmentOptions.Center;
+        damangeTextUI.fontSize = 0.5f;
+        Billboards billboard = gameObejct.AddComponent<Billboards>();
+        billboard.enbledSelfTarget = true;
+        StartCoroutine(UIScaleCurve(damangeTextUI, scaleCurve, 1.5f));
+        StartCoroutine(UIFadeCoroutine(damangeTextUI, 0f, 1f, 0.2f, false));
+        StartCoroutine(UIFadeCoroutine(damangeTextUI, 1f, 0f, 1.5f, true));
+        if (debugMode)
+            Debug.Log("Generated Text");
+    }
+    private IEnumerator UIScaleCurve(TextMeshProUGUI text, AnimationCurve curve, float time)
+    {
+        float elapsedTime = 0;
+        while (elapsedTime <= time)
+        {
+            elapsedTime += Time.deltaTime;
+            text.gameObject.transform.localScale = Vector3.one * scaleCurve.Evaluate(elapsedTime);
+            yield return null;
+        }
+        text.gameObject.transform.localScale = Vector3.one * scaleCurve.Evaluate(time);
+    }
     public void CreateCriticalCountText(CharacterBase character, string value)
     {
         string criticalValueText = $"Critical\n{value}";
-        CreateText(character, criticalValueText);
+        CreateTextInWorld(character, criticalValueText);
     }
     private IEnumerator UIFadeCoroutine(TextMeshProUGUI textUI, float startAlpha, float endAlpha, float duration, bool destroyOnComplete = false)
     {

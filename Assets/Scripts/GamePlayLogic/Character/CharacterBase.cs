@@ -386,7 +386,7 @@ public abstract class CharacterBase : Entity
         if (isCritical)
             UniversalUIManager.instance.CreateCriticalCountText(this, damageText);
         else
-            UniversalUIManager.instance.CreateText(this, damageText);
+            UniversalUIManager.instance.CreateTextInWorld(this, damageText);
         TakeDamageEffect();
         if (currentHealth <= 0)
         {
@@ -427,7 +427,7 @@ public abstract class CharacterBase : Entity
 
         currentHealth = targetHealth;
         string healText = heal.ToString();
-        UniversalUIManager.instance.CreateText(this, healText);
+        UniversalUIManager.instance.CreateTextInWorld(this, healText);
     }
     private void KnockOut()
     {

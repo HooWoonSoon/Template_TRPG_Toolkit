@@ -140,6 +140,4 @@ public class Parabola
         }
         return null;
     }
-
-
 }

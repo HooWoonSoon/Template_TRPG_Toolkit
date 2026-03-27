@@ -1209,19 +1209,11 @@ namespace Tactics.AI
                         new Vector3(0, decisionMaker.shootOffsetHeight, 0),
                         target, skill.initialElevationAngle, ignoreUnits);
 
-
-                    //List<UnitDetectable> units = parabola.GetParabolaHitUnits(projectileDetect, startNode.GetNodeVector() +
-                    //    new Vector3(0, decisionMaker.shootOffsetHeight, 0),
-                    //    target, skill.initialElevationAngle, ignoreUnits);
-
                     Vector3 start = startNode.GetNodeVector() +
                         new Vector3(0, decisionMaker.shootOffsetHeight, 0);
                     if (unit == null) return false;
 
-                    Debug.Log($"Start: {start}, Target: {target}, Detected: {unit.GetComponent<CharacterBase>()}");
-
-                    //string join = string.Join(", ", units.Select(u => u.GetComponent<CharacterBase>().name));
-                    //Debug.Log($"Target: {target}, Detected: {join}");
+                    //Debug.Log($"Start: {start}, Target: {target}, Detected: {unit.GetComponent<CharacterBase>()}");
 
                     CharacterBase hitCharacter = unit.GetComponent<CharacterBase>();
 

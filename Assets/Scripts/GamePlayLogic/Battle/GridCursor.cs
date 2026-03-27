@@ -125,9 +125,9 @@ public class GridCursor : Entity
         }
     }
 
-    public void ActivateMoveCursor(bool active, bool hide)
+    public void ActivateMoveCursor(bool allowControl, bool hide)
     {
-        activateCursor = active;
+        activateCursor = allowControl;
         cursor.SetActive(!hide);
     }
 

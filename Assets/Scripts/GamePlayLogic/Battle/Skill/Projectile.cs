@@ -395,6 +395,5 @@ public class Projectile : Entity
 
             Gizmos.DrawSphere(nextPos, 0.05f);
         }
-
     }
 }

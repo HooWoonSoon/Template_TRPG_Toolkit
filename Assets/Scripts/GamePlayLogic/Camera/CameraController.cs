@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using Tactics.InputHelper;
 using System;
+using Unity.VisualScripting;
 
 public class CameraController : MonoBehaviour
 {
@@ -31,10 +32,12 @@ public class CameraController : MonoBehaviour
     public bool enableRotateAlignment = false;
     private Quaternion rotateAlignmentTarget;
     private bool isRotateAligmenting = false;
+    private bool enableRotateTillTargetFollow = false;
 
     public bool enableTacticalView = false;
 
     public bool debugMode = false;
+    private bool isMasking = false;
     public static CameraController instance { get; private set; }
     private void Awake()
     {
@@ -62,6 +65,8 @@ public class CameraController : MonoBehaviour
             if (enableTacticalView) return;
             isTargeting = true;
             isResetting = true;
+
+            isRotateAligmenting = false;
         }
         else if (InputKeyHelper.GetKeyDownSolo(KeyCode.Escape))
         {
@@ -71,10 +76,6 @@ public class CameraController : MonoBehaviour
         {
             enableTacticalView = !enableTacticalView;
             isTargeting = true;
-            if (enableTacticalView)
-            {
-                RecordPosAndAngle();
-            }
         }
         else if (InputKeyHelper.GetKeyCombo(KeyCode.LeftControl, KeyCode.T))
         { 
@@ -88,6 +89,7 @@ public class CameraController : MonoBehaviour
         MoveCamera();
         RotateCamera();
         RotateCameraAlignment();
+        RotateTillTargetFollow();
         ZoomCamera();
         MoveCameraViewAlignment();
         TacticCameraViewAlignment();
@@ -175,6 +177,11 @@ public class CameraController : MonoBehaviour
     private void RotateCameraAlignment()
     {
         if (!enableRotateAlignment || enableTacticalView) { return; }
+        if (isResetting) 
+        {
+            isRotateAligmenting = false;
+            return;
+        }
 
         float currentY = pivotPoint.localEulerAngles.y;
         currentY = Mathf.Repeat(currentY, 360f);
@@ -206,9 +213,66 @@ public class CameraController : MonoBehaviour
             generalPivotRotate = pivotPoint.localRotation;
         }
     }
+    private void RotateTillTargetFollow()
+    {
+        if (!enableRotateTillTargetFollow) return;
+
+        if (cameraBody == null || followTarget == null) return;
+        UnitDetectable followUnit = followTarget.GetComponent<UnitDetectable>();
+        if (followUnit == null) return;
+
+        Vector3 start = cameraBody.transform.position;
+        Vector3 end = followTarget.transform.position;
+
+        Vector3 delta = start - end;
+        for (int i = 0; i < 360; i += 90)
+        {
+            Quaternion rotation = Quaternion.AngleAxis(i, Vector3.up);
+            Vector3 startPos = end + rotation * delta;
+            UnitDetectable unit = DetectableRay.RayDetectionFollowTarget(startPos, end);
+            if (unit == followUnit)
+            {
+                Debug.Log($"Rotate {i} degree to focus follow target");
+                RotateCameraAlignment(i);
+                return;
+            }
+        }
+    }
+    private void RotateCameraAlignment(float degreeY)
+    {
+        if (!enableRotateAlignment || enableTacticalView) { return; }
+        if (isResetting)
+        {
+            isRotateAligmenting = false;
+            return;
+        }
+        float currentY = pivotPoint.localEulerAngles.y;
+        currentY = Mathf.Repeat(currentY, 360f);
+        float snappedY = Mathf.Round(currentY / 90f) * 90f;
+
+        if (!isRotateAligmenting)
+        {
+            isRotateAligmenting = true;
+            rotateAlignmentTarget = Quaternion.Euler(0, snappedY + degreeY, 0);
+        }
+        else
+        {
+            pivotPoint.localRotation = Quaternion.Lerp(pivotPoint.localRotation,
+                rotateAlignmentTarget, Time.deltaTime * moveSpeed);
+            generalPivotRotate = pivotPoint.localRotation;
+        }
+
+        if (Quaternion.Angle(pivotPoint.localRotation, rotateAlignmentTarget) <= 0.5f)
+        {
+            isRotateAligmenting = false;
+            pivotPoint.localRotation = rotateAlignmentTarget;
+            generalPivotRotate = pivotPoint.localRotation;
+            enableRotateTillTargetFollow = false;
+        }
+    }
     private void ZoomCamera()
     {
-        if (enableTacticalView) { return; }
+        if (isResetting && enableTacticalView) { return; }
 
         if (InputKeyHelper.GetKeySolo(KeyCode.Equals))
         {
@@ -271,6 +335,11 @@ public class CameraController : MonoBehaviour
     {
         if (followTarget != null)
             isTargeting = true;
+    }
+    public void TriggerRotateTillTargetFollow(bool trigger)
+    {
+        if (followTarget != null)
+            enableRotateTillTargetFollow = trigger;
     }
 
     public Vector3 GetCameraTransformDirection(Vector3 direction)
