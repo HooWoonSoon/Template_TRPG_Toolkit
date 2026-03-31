@@ -37,7 +37,6 @@ public class CameraController : MonoBehaviour
     public bool enableTacticalView = false;
 
     public bool debugMode = false;
-    private bool isMasking = false;
     public static CameraController instance { get; private set; }
     private void Awake()
     {

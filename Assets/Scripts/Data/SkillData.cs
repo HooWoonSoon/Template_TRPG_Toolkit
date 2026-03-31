@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using static UnityEngine.RuleTile.TilingRuleOutput;
 public enum SkillTargetType
 {
     Self, Our, Opposite, Both
@@ -62,9 +63,92 @@ public class SkillData : ScriptableObject
         foreach (GameNode node in coverange)
         {
             if (occulusion.Contains(node)) continue;
+            if (!HasBlockByVerticalNode(world, origin, node)) continue;
             result.Add(node);
         }
         return result;
+    }
+    private bool HasBlockByVerticalNode(World world, GameNode from, GameNode to)
+    {
+        Vector3Int start = from.GetNodeVectorInt();
+        Vector3Int end = to.GetNodeVectorInt();
+
+        // Only check vertical nodes (same x and z, different y)
+        if (start.x != end.x || start.z != end.z)
+            return true;
+
+        int minY = Mathf.Min(start.y, end.y);
+        int maxY = Mathf.Max(start.y, end.y);
+
+        for (int y = minY + 1; y <= maxY; y++)
+        {
+            Vector3Int checkPos = new Vector3Int(start.x, y, start.z);
+
+            if (world.loadedNodes.TryGetValue(checkPos, out GameNode node))
+            {
+                if (node.hasCube)
+                    return false;
+            }
+        }
+        return true;
+    }
+
+    public List<GameNode> GetInflueneHasNode(World world, GameNode origin)
+    {
+        Dictionary<GameNode, int> distance = new Dictionary<GameNode, int>();
+
+        List<GameNode> queue = new List<GameNode> {origin};
+        List<GameNode> visited = new List<GameNode>{origin};
+        distance[origin] = 0;
+
+        int index = 0;
+
+        while (index < queue.Count)
+        {
+            GameNode currentNode = queue[index];
+            index++;
+
+            int currentDistance = distance[currentNode];
+            if (currentDistance > skillRange) continue;
+
+            visited.Add(currentNode);
+            List<GameNode> neighbourNodes = GetNeighbourNode(world, currentNode);
+
+            foreach (GameNode neighbourNode in neighbourNodes)
+            {
+                if (visited.Contains(neighbourNode)) continue;
+                if (!neighbourNode.hasCube) continue;
+
+                visited.Add(neighbourNode);
+                queue.Add(neighbourNode);
+                distance[neighbourNode] = currentDistance + 1;
+            }
+        }
+        return visited;
+    }
+    private List<GameNode> GetNeighbourNode(World world, GameNode currentNode)
+    {
+        List<GameNode> neighbourNodes = new List<GameNode>();
+        Vector3Int currentPos = currentNode.GetNodeVectorInt();
+        Vector3Int[] directions = new Vector3Int[]
+        {
+            new Vector3Int(0, 0, 1),
+            new Vector3Int(0, 0, -1),
+            new Vector3Int(1, 0, 0),
+            new Vector3Int(-1, 0, 0),
+            new Vector3Int(0, 1, 0),
+            new Vector3Int(0, -1, 0)
+        };
+        foreach (Vector3Int direction in directions)
+        {
+            Vector3Int neighbourPos = currentPos + direction;
+            world.loadedNodes.TryGetValue(neighbourPos, out GameNode neighbourNode);
+            if (neighbourNode != null)
+            {
+                neighbourNodes.Add(neighbourNode);
+            }
+        }
+        return neighbourNodes;
     }
 }
 

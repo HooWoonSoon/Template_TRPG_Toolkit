@@ -5,7 +5,7 @@ public class PlayerTeamSystem : TeamSystem
     public TeamDeployment teamDeployment;
     public List<TeamFollower> linkMembers;
     private List<PlayerCharacter> unlinkMember = new List<PlayerCharacter>();
-    public PlayerCharacter currentLeader { get; private set; }
+    public PlayerCharacter currentControl { get; private set; }
 
     public int spacingDistance = 2;
     [SerializeField] private int historyLimit = 15;
@@ -18,7 +18,7 @@ public class PlayerTeamSystem : TeamSystem
 
     private void OnEnable()
     {
-        GameEvent.onLeaderChangedRequest += SetTeamFollowerLeader;
+        GameEvent.onLeaderChangedRequest += SetTeamControl;
         GameEvent.onTeamSortExchange += SortTeamFollower;
         GameEvent.onTeamSortExchange += ClearAllHistory;
 
@@ -28,7 +28,7 @@ public class PlayerTeamSystem : TeamSystem
 
     private void OnDisable()
     {
-        GameEvent.onLeaderChangedRequest -= SetTeamFollowerLeader;
+        GameEvent.onLeaderChangedRequest -= SetTeamControl;
         GameEvent.onTeamSortExchange -= SortTeamFollower;
         GameEvent.onTeamSortExchange -= ClearAllHistory;
 
@@ -50,7 +50,7 @@ public class PlayerTeamSystem : TeamSystem
     protected override void Start()
     {
         base.Start();
-        SetTeamFollowerLeader();
+        SetTeamControl();
         stateMachine.Initialize(teamIdleState);
     }
 
@@ -130,7 +130,7 @@ public class PlayerTeamSystem : TeamSystem
 
         linkMembers = sortedList;
         RefreshTeamFollower();
-        SetTeamFollowerLeader();
+        SetTeamControl();
     }
 
     //  Summary
@@ -163,9 +163,9 @@ public class PlayerTeamSystem : TeamSystem
     /// Set the leader of the team by checking the index of each unit character.
     /// The first character in the list is set as the leader.
     /// </summary>
-    public void SetTeamFollowerLeader()
+    public void SetTeamControl()
     {
-        currentLeader = null;
+        currentControl = null;
 
         for (int i = 0; i < linkMembers.Count; i++)
         {
@@ -173,11 +173,11 @@ public class PlayerTeamSystem : TeamSystem
 
             if (linkMembers[i].character.index == 0) 
             { 
-                unitCharacter.isLeader = true;
-                currentLeader = unitCharacter;
-                GameEvent.onLeaderChanged?.Invoke(currentLeader);
+                unitCharacter.setControl = true;
+                currentControl = unitCharacter;
+                GameEvent.onLeaderChanged?.Invoke(currentControl);
             }
-            else { unitCharacter.isLeader = false; }
+            else { unitCharacter.setControl = false; }
         }
     }
     #endregion
@@ -239,7 +239,7 @@ public class PlayerTeamSystem : TeamSystem
     {
         direction = Vector3.zero;
 
-        if (!currentLeader.isMoving) { return; }
+        if (!currentControl.isMoving) { return; }
         if (member == null || follower.positionHistory.Count < 2) return;
 
         List<Vector3> history = follower.positionHistory;

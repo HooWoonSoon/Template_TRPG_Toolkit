@@ -29,7 +29,7 @@ public class MapSwitchTrigger : Entity
         {
             PlayerCharacter playerCharacter = detectable.GetComponent<PlayerCharacter>();
             if (playerCharacter == null) { continue; }
-            if (playerCharacter.isLeader)
+            if (playerCharacter.setControl)
             {
                 if (teleportPoint != null)
                 {
@@ -59,7 +59,7 @@ public class MapSwitchTrigger : Entity
                 PlayerCharacter playerCharacter = unit.GetComponent<PlayerCharacter>();
                 if (playerCharacter == null) { continue; }
 
-                if (playerCharacter.isLeader)
+                if (playerCharacter.setControl)
                 {
                     Debug.Log("Leader left range");
                     leaderLeft = true;

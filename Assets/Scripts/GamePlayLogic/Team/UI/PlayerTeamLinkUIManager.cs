@@ -1,43 +1,67 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections.Generic;
 using UnityEngine.UI;
+using System;
 
 public class PlayerTeamLinkUIManager : MonoBehaviour
 {
     public TeamDeployment teamDeployment;
+    public PlayerTeamSystem teamSystem;
 
     [SerializeField] private Canvas canvas;
     public TeamLinkUI[] teamLinkUIs;
     private TeamLinkUI currentTeamLinkUI;
     private TeamLinkUI markedTeamLinkUI;
 
-    public MiniUISetTooltip miniUISetTooltip;
-    public Vector2[] miniUIPopUpPos = new Vector2[]
-    {
-        new Vector2(-720, 460),
-        new Vector2(-640, 380),
-        new Vector2(-720, 300),
-        new Vector2(-800, 380)
-    };
-    public TeamLinkButton teamLinkButton;
+    public TeamLinkUIMiniUISet miniUISetTooltip;
 
-    [SerializeField] private LayerMask layerMask;
+    public List<Vector2> queueSelectUIPos = new List<Vector2>
+    {
+        new Vector2(-800, 410),
+        new Vector2(-720, 330),
+        new Vector2(-800, 250),
+        new Vector2(-880, 330)
+    };
 
     private Image currentInteractImage;
     private RectTransform objectRectTransform;
     private Vector2 lastMousePosition;
 
     private bool isDragging = false;
-    private bool isTinyUIPopUp = false;
-
-    private int prevPopUpIndex = -1;
-    private GameObject prevInteractObject;
 
     [Header("Team UI Effect")]
     //[SerializeField] private float lerpSpeed = 5f;
     [SerializeField] private Vector2 UIAdjustedOffset = new Vector2(5, 0);
 
+    private enum Method { Drag, KeyOnly }
+    [SerializeField] private Method method;
+
+    [Serializable]
+    public class UIOptionMode
+    {
+        public bool isPopOut;
+        public bool isPopping;
+        public int currentPopOutIndex = -1;
+        public int lastPopOutIndex = -1;
+        public int selectedIndex = -1;
+    }
+    private UIOptionMode optionMode = new UIOptionMode();
+    public Action<bool> OnOptionalUIState;
+
+    [Serializable]
+    public class UIQueueMode
+    {
+        public bool isQueueMode;
+        public int currentHoverIndex = -1;
+        public int selectQueueIndex = -1;
+    }
+    private UIQueueMode queueMode = new UIQueueMode();
+    public Action<bool> OnQueueState;
+
+    private string currentInputHandler = "";
+
     private bool activation = true;
+
     public static PlayerTeamLinkUIManager instance { get; private set; }
 
     private void Awake()
@@ -50,6 +74,54 @@ public class PlayerTeamLinkUIManager : MonoBehaviour
     {
         GameEvent.onBattleUnitKnockout += (c) => { AutoExchangeSort(); };
     }
+    
+    private void Update()
+    {
+        if (activation == false) { return; }
+
+        if (method == Method.Drag)
+        {
+            //  Summary
+            //      Always update the closest UIClass in order to sort and swap the UI
+            TeamLinkUI closestUIClass = GetClosestUIClass();
+
+            if (Input.GetMouseButtonDown(0))
+            {
+                //  Summary
+                //      Reset all before function
+                ResetTeamLinkObject();
+
+                GetTeamLinkUIObject();
+                RecordActivePositionInUI();
+
+                ResetTeamLinkClass();
+            }
+       
+            if (Input.GetMouseButton(0))
+            {
+                DragUI();
+                PopInTeamLinkOptionContentDrag();
+                PromptTeamUIWhenDrag(closestUIClass);
+            }
+
+            if (Input.GetMouseButtonUp(0))
+            {
+                DragToExchangeSorts(closestUIClass);
+            }
+        }
+        else if (method == Method.KeyOnly) 
+        {
+            HandleQKey();
+            HandleQueueModeInput();
+            HandlePromptInput();
+            HandleOptionModeInput();
+            HandleEscape();
+        }
+
+        //  Summary
+        //      Always update the UI tooltip content
+        UpdateUILinkTooltip();
+    }
 
     private void Initialize()
     {
@@ -60,71 +132,128 @@ public class PlayerTeamLinkUIManager : MonoBehaviour
         {
             teamLinkUIs[i].Initialize(characters[i], i);
         }
-
-        ////  Remove more UI than character
-        //for (int i = count; i < teamLinkUIs.Length; i++)
-        //{
-        //    teamLinkUIs[i].Initialize(null, i);
-        //}
     }
 
-    private void Update()
+    private void HandleQKey()
     {
-        if (activation == false) { return; }
-        //  Summary
-        //      Always update the closest UIClass in order to sort and swap the UI
-        TeamLinkUI closestUIClass = GetClosestUIClass();
-        
-        if (Input.GetMouseButtonDown(0))
+        if (!currentInputHandler.Equals("")) return;
+        if (optionMode.isPopping) { return; }
+        if (Input.GetKeyDown(KeyCode.Q))
         {
-            //  Summary
-            //      Reset all before function
-            ResetTeamLinkObject();
+            currentInputHandler = "Q";
 
-            GetTeamLinkUIObject();
-            RecordActivePositionInUI();
-
-            ResetTeamLinkClass();
+            if (!queueMode.isQueueMode && !optionMode.isPopOut)
+            {
+                currentTeamLinkUI = teamLinkUIs[0];
+                optionMode.lastPopOutIndex = currentTeamLinkUI.index;
+                EnterQueueMode(currentTeamLinkUI.index);
+                PopInOption(() =>
+                {
+                    currentInputHandler = "";
+                });
+            }
+            else if (!queueMode.isQueueMode && optionMode.isPopOut)
+            {
+                EnterQueueMode(currentTeamLinkUI.index);
+                PopInOption(() =>
+                {
+                    currentInputHandler = "";
+                });
+            }
+            else if (queueMode.isQueueMode && queueMode.currentHoverIndex == queueMode.selectQueueIndex)
+            {
+                ExitQueueMode();
+                if (!optionMode.isPopOut)
+                {
+                    PopOutOption(optionMode.lastPopOutIndex, () =>
+                    {
+                        currentInputHandler = "";
+                    });
+                }
+            }
+            else if (queueMode.isQueueMode && queueMode.currentHoverIndex != queueMode.selectQueueIndex)
+            {
+                ConfirmQueue();
+                CloseAllMode();
+                currentInputHandler = "";
+            }
         }
-       
-        if (Input.GetMouseButton(0))
+    }
+    private void HandleQueueModeInput()
+    {
+        if (queueMode.isQueueMode)
         {
-            DragUI();
-            PopInTeamLinkOptionContentDrag();
-            PromptTeamUIWhenDrag(closestUIClass);
+            if (Input.GetKeyDown(KeyCode.D))
+            {
+                MoveQueueSelection(1);
+            }
+            else if (Input.GetKeyDown(KeyCode.A))
+            {
+                MoveQueueSelection(-1);
+            }
         }
-
-        if (Input.GetMouseButtonUp(0))
-        {
-            ExchangeSorts(closestUIClass);
-        }
-
-        #region UI Prompt Effect
+    }
+    private void HandlePromptInput()
+    {
+        if (!currentInputHandler.Equals("")) return;
         if (Input.GetKeyDown(KeyCode.Alpha1))
         {
-            ProcessTeamLinkOption(0);
+            currentInputHandler = "Alpha1";
             CameraToOptionCharacter(0);
+            ProcessInternalUIBy(0);
+            currentInputHandler = "";
         }
         else if (Input.GetKeyDown(KeyCode.Alpha2))
         {
-            ProcessTeamLinkOption(1);
+            currentInputHandler = "Alpha2";
             CameraToOptionCharacter(1);
+            ProcessInternalUIBy(1);
+            currentInputHandler = "";
         }
         else if (Input.GetKeyDown(KeyCode.Alpha3))
         {
-            ProcessTeamLinkOption(2);
+            currentInputHandler = "Alpha3";
             CameraToOptionCharacter(2);
+            ProcessInternalUIBy(2);
+            currentInputHandler = "";
         }
         else if (Input.GetKeyDown(KeyCode.Alpha4))
         {
-            ProcessTeamLinkOption(3);
+            currentInputHandler = "Alpha4";
             CameraToOptionCharacter(3);
+            ProcessInternalUIBy(3);
+            currentInputHandler = "";
         }
-        #endregion
-
-        //  Summary
-        //      Always update the UI tooltip content
-        UpdateUILinkTooltip();
+    }
+    private void HandleOptionModeInput()
+    {
+        if (optionMode.isPopOut)
+        {
+            if (Input.GetKeyDown(KeyCode.S))
+            {
+                MoveOption(1);
+            }
+            else if (Input.GetKeyDown(KeyCode.W))
+            {
+                MoveOption(-1);
+            }
+            else if (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.Return))
+            {
+                ConfirmOption();
+                CloseAllMode();
+            }
+        }
+    }
+    private void HandleEscape()
+    {
+        if (!currentInputHandler.Equals("")) return;
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            currentInputHandler = "Escape";
+            CloseAllMode();
+            CameraToOptionCharacter(0);
+            currentInputHandler = "";
+        }
     }
 
     #region UI Update Content
@@ -132,16 +261,15 @@ public class PlayerTeamLinkUIManager : MonoBehaviour
     {
         UpdateUILinkTooltipLinkText();
     }
-
     private void UpdateUILinkTooltipLinkText()
     {
-        if (prevPopUpIndex == -1) { return; }
+        if (!optionMode.isPopOut) { return; }
 
         List<PlayerCharacter> character = teamDeployment.GetAllOfType<PlayerCharacter>();
 
         for (int i = 0; i < character.Count; i++)
         {
-            if (character[i].index == prevPopUpIndex)
+            if (character[i].index == optionMode.currentPopOutIndex)
             {
                 bool isLink = character[i].isLink;
                 miniUISetTooltip.ChangeOptionUILinkText(isLink);
@@ -161,7 +289,6 @@ public class PlayerTeamLinkUIManager : MonoBehaviour
         lastMousePosition = Input.mousePosition;
         isDragging = false;
     }
-
     private void ResetTeamLinkClass()
     {
         if (currentTeamLinkUI == null)
@@ -173,7 +300,6 @@ public class PlayerTeamLinkUIManager : MonoBehaviour
     }
     #endregion
 
-    #region UI Gain Object Methods
     private void GetTeamLinkUIObject()
     {
         if (currentInteractImage != null) { return; }
@@ -187,7 +313,7 @@ public class PlayerTeamLinkUIManager : MonoBehaviour
         {
             if (teamUI.controlImage == currentInteractImage)
             {
-                if (teamUI.canDrag)
+                if (teamUI.character.unitState == UnitState.Active)
                 {
                     currentTeamLinkUI = teamUI;
                     objectRectTransform = currentInteractImage.GetComponent<RectTransform>();
@@ -196,18 +322,34 @@ public class PlayerTeamLinkUIManager : MonoBehaviour
             }
         }
     }
-
-    private void ProcessTeamLinkOption(int index = -1)
+    private void ProcessInternalUIBy(int index, Action onComplete = null)
     {
-        ResetTeamLinkObject();
-        GetTeamLinkUI(index);
-        PopOutTeamLinkOptionContent();
-        ResetTeamLinkClass();
-    }
+        if (queueMode.isQueueMode && optionMode.currentPopOutIndex == index)
+        {
+            ExitQueueMode();
+            PopOutOption(index, onComplete);
+        }
+        else if (optionMode.currentPopOutIndex == index)
+        {
+            PopInOption(onComplete);
+            return;
+        }
 
-    private void GetTeamLinkUI(int index)
-    {
-        currentTeamLinkUI = teamLinkUIs[index];
+        if (!queueMode.isQueueMode)
+        {
+            if (currentTeamLinkUI != null)
+            {
+                currentTeamLinkUI.EnableSway(false);
+            }
+
+            ResetTeamLinkObject();
+            currentTeamLinkUI = teamLinkUIs[index];
+            PopOutOption(index, () =>
+            {
+                ResetTeamLinkClass();
+                onComplete?.Invoke();
+            });
+        }
     }
 
     private TeamLinkUI GetClosestUIClass()
@@ -223,7 +365,7 @@ public class PlayerTeamLinkUIManager : MonoBehaviour
         {
             if (objectRectTransform != null && teamUI != currentTeamLinkUI)
             {
-                float distance = Vector2.Distance(objectRectTransform.anchoredPosition, teamUI.rectPosition);
+                float distance = Vector2.Distance(objectRectTransform.anchoredPosition, teamUI.locatedPos);
                 if (distance < closestDistance)
                 {
                     closestDistance = distance;
@@ -233,18 +375,90 @@ public class PlayerTeamLinkUIManager : MonoBehaviour
         }
         return closestUIClass;
     }
-    #endregion
 
-    #region UI Control State
+    #region Queue Method
+    private void EnterQueueMode(int index)
+    {
+        queueMode.isQueueMode = true;
+        queueMode.currentHoverIndex = index;
+        queueMode.selectQueueIndex = index;
+        currentTeamLinkUI = teamLinkUIs[index];
+
+        OnQueueState?.Invoke(true);
+
+        currentTeamLinkUI.EnableSway(true);
+        miniUISetTooltip.SetQueueFromUI(queueSelectUIPos[queueMode.currentHoverIndex]);
+        miniUISetTooltip.ShowTipLeftAndRight(true);
+        miniUISetTooltip.SetQueueTip_Select_And_Confirm();
+        Debug.Log("Enable queue sort");
+    }
+    private void ExitQueueMode()
+    {
+        queueMode.isQueueMode = false;
+        queueMode.currentHoverIndex = -1;
+        queueMode.selectQueueIndex = -1;
+
+        OnQueueState?.Invoke(false);
+
+        foreach (var teamLinkUI in teamLinkUIs)
+        {
+            teamLinkUI.EnableSway(false);
+        }
+        miniUISetTooltip.queueFromUIObject.SetActive(false);
+        miniUISetTooltip.queueSelectUIObject.SetActive(false);
+        miniUISetTooltip.ShowTipLeftAndRight(false);
+        miniUISetTooltip.SetQueueTip_Select_And_Change();
+        Debug.Log("Diasble queue sort");
+    }
+    private void MoveQueueSelection(int input)
+    {
+        queueMode.selectQueueIndex += input;
+        if (queueMode.selectQueueIndex > teamLinkUIs.Length - 1)
+        {
+            queueMode.selectQueueIndex = 0;
+        }
+        else if (queueMode.selectQueueIndex < 0)
+        {
+            queueMode.selectQueueIndex = teamLinkUIs.Length - 1;
+        }
+
+        if (queueMode.currentHoverIndex != queueMode.selectQueueIndex)
+            miniUISetTooltip.SetQueueSelectUI(queueSelectUIPos[queueMode.selectQueueIndex]);
+        else
+            miniUISetTooltip.queueSelectUIObject.SetActive(false);
+    }
+    private void ConfirmQueue()
+    {
+        if (queueMode.currentHoverIndex != queueMode.selectQueueIndex)
+        {
+            int from = queueMode.currentHoverIndex;
+            int to = queueMode.selectQueueIndex;
+
+            currentTeamLinkUI.SwapUI(teamLinkUIs[to]);
+            Debug.Log($"Swap {from} -> {to}");
+            
+            currentTeamLinkUI = teamLinkUIs[to];
+
+            TeamLinkUI tempTeamLinkUI = teamLinkUIs[from];
+            teamLinkUIs[from] = teamLinkUIs[to];
+            teamLinkUIs[to] = tempTeamLinkUI;
+        }
+        ExitQueueMode();
+    }
+    #endregion
+    private void CloseAllMode()
+    {
+        ExitQueueMode();
+        PopInOption();
+    }
+
+    #region Drag Methods
     private void RecordActivePositionInUI()
     {
         if (currentTeamLinkUI == null) { return; }
 
         lastMousePosition = Input.mousePosition;
     }
-    #endregion
-
-    #region Drag Methods
     private void DragUI()
     {
         Vector2 currentMousePosition = Input.mousePosition;
@@ -256,13 +470,22 @@ public class PlayerTeamLinkUIManager : MonoBehaviour
         objectRectTransform.anchoredPosition += new Vector2(delta.x, delta.y);
         lastMousePosition = currentMousePosition;
     }
-    #endregion
-    private void ExchangeSorts(TeamLinkUI closestUIClass)
+    private void PopInTeamLinkOptionContentDrag()
     {
-        if (closestUIClass == null || isDragging == false) return;
+        if (isDragging == true)
+        {
+            PopInOption();
+        }
+    }
+    #endregion
+    private void DragToExchangeSorts(TeamLinkUI closestUIClass)
+    {
+        if (closestUIClass == null) return;
+
+        if (method == Method.Drag && isDragging == false) return;
 
         //Debug.Log($"Closest UIClass Image {closestUIClass.image}");
-        bool didSwap = currentTeamLinkUI.Swap(closestUIClass);
+        bool didSwap = currentTeamLinkUI.SwapUI(closestUIClass);
 
         if (didSwap) { ResetTeamLinkObject(); }
     }
@@ -291,82 +514,102 @@ public class PlayerTeamLinkUIManager : MonoBehaviour
             if (nextIndex >= teamLinkUIs.Length) { return; }
 
             TeamLinkUI nextUI = teamLinkUIs[nextIndex];
-            teamLinkUI.Swap(nextUI);
+            teamLinkUI.SwapUI(nextUI);
 
             teamLinkUIs[nextIndex] = teamLinkUI;
             teamLinkUIs[nextIndex - 1] = nextUI;
         }
     }
 
-    #region Pop Out /In Methods
-    private void PopOutTeamLinkOptionContent()
+    #region Option Methods
+    public void PopOutOption(int index, Action onComplete = null)
     {
-        if (currentTeamLinkUI == null) { return; }
-
-        //  Summary
-        //      Check if the tooltip is already active, if not, activate it
-        if (!miniUISetTooltip.gameObject.activeSelf) 
+        optionMode.isPopping = true;
+        PopInOption(() =>
         {
-            miniUISetTooltip.gameObject.SetActive(true);
-        }
+            optionMode.lastPopOutIndex = index;
+            optionMode.selectedIndex = 0;
+            miniUISetTooltip.SelectOptionUI(optionMode.selectedIndex);
+            
+            miniUISetTooltip.PopOut(currentTeamLinkUI.uiPopupPos, () =>
+            {
+                optionMode.isPopOut = true;
+                optionMode.currentPopOutIndex = index;
+                optionMode.isPopping = false;
 
-        int currentIndex = currentTeamLinkUI.index;
-        miniUISetTooltip.PopOut(miniUIPopUpPos[currentIndex]);
-        Debug.Log($"currentIndex: {currentIndex} characterID {currentTeamLinkUI.character}");
-        teamLinkButton.Initialize(currentTeamLinkUI);
-        
-        prevPopUpIndex = currentIndex;
-        isTinyUIPopUp = true;
+                OnOptionalUIState?.Invoke(true);
+                onComplete?.Invoke();
+            });
+        });
     }
-
-    private void PopInTeamLinkOptionContentDrag()
+    public void PopInOption(Action onComplete = null)
     {
-        if (isDragging == true)
+        if (!optionMode.isPopOut)
         {
-            PopInTeamLinkOptionContent();
+            onComplete?.Invoke();
+            return;
+        }
+
+        if (optionMode.isPopOut)
+        {
+            miniUISetTooltip.PopIn(currentTeamLinkUI.uiPopupPos, () =>
+            {
+                optionMode.isPopOut = false;
+                optionMode.currentPopOutIndex = -1;
+                optionMode.selectedIndex = -1;
+
+                miniUISetTooltip.DeselectOptionUI();
+
+                OnOptionalUIState?.Invoke(false);
+                onComplete?.Invoke();
+            });
         }
     }
-    public void PopInTeamLinkOptionContent()
+    public void MoveOption(int input)
     {
-        if (prevPopUpIndex != -1 && isTinyUIPopUp == true)
+        optionMode.selectedIndex += input;
+        int maxIndex = miniUISetTooltip.options.Length - 1;
+        if (optionMode.selectedIndex < 0) 
         {
-            miniUISetTooltip.PopIn(miniUIPopUpPos[prevPopUpIndex]);
-            prevPopUpIndex = -1;
-
-            isTinyUIPopUp = false;
+            optionMode.selectedIndex = 0;
         }
+        else if (optionMode.selectedIndex > maxIndex) 
+        {
+            optionMode.selectedIndex = maxIndex;
+        }
+        miniUISetTooltip.SelectOptionUI(optionMode.selectedIndex);
+    }
+    public void ConfirmOption()
+    {
+        int index = optionMode.selectedIndex;
+        miniUISetTooltip.options[index].Confirm(teamSystem, currentTeamLinkUI);
     }
     #endregion
 
-    #region Prompt UI
-    //  Summary
-    //      Prompt the UI to show the closest UIClass
+    /// <summary>
+    /// Prompt the UI to show the closest UIClass
+    /// </summary>
+    /// <param name="closestUIClass"></param>
     private void PromptTeamUIWhenDrag(TeamLinkUI closestUIClass)
     {
-        if (isDragging) { MarkUI(closestUIClass); }
-    }
-
-    private void MarkUI(TeamLinkUI closestUIClass)
-    {
-        if (closestUIClass == null) { return; }
-
-        if (markedTeamLinkUI != closestUIClass)
+        if (isDragging) 
         {
-            if (markedTeamLinkUI != null) { UnmarkUI(); }
+            if (closestUIClass == null) { return; }
 
-            markedTeamLinkUI = closestUIClass;
-            closestUIClass.AdjustOffsetToPosition(UIAdjustedOffset);
+            if (markedTeamLinkUI != closestUIClass)
+            {
+                if (markedTeamLinkUI != null) 
+                {
+                    markedTeamLinkUI.ResetPosition();
+                    markedTeamLinkUI = null;
+                }
+
+                markedTeamLinkUI = closestUIClass;
+                closestUIClass.AdjustOffsetToPosition(UIAdjustedOffset);
+            }
         }
     }
 
-    private void UnmarkUI()
-    {
-        if (markedTeamLinkUI == null) { return; }
-        
-        markedTeamLinkUI.ResetPosition();
-        markedTeamLinkUI = null;
-    }
-    #endregion
     private void CameraToOptionCharacter(int index)
     {
         CharacterBase character = teamLinkUIs[index].character;
@@ -375,7 +618,6 @@ public class PlayerTeamLinkUIManager : MonoBehaviour
     private void DisableTeamUIDrag(TeamLinkUI teamLinkUI)
     {
         teamLinkUI.characterIcon.color = new Color(1, 1, 1, 0.5f);
-        teamLinkUI.canDrag = false;
     }
 
     #region External Method

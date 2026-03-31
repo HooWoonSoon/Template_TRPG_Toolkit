@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -421,15 +422,16 @@ public static class Utils
 
     public static void ApplyAnimation(MonoBehaviour mono, RectTransform rectTransform,
     Vector2 startPosition, Vector2 endPosition, Vector2 startScale, Vector2 endScale, float duration,
-    bool useElastic, UnityEvent onComplete)
+    bool useElastic, Action onComplete, out Coroutine corroutine)
     {
-        mono.StartCoroutine(Animate(rectTransform, startPosition, endPosition,
+        corroutine = 
+            mono.StartCoroutine(Animate(rectTransform, startPosition, endPosition,
             startScale, endScale, duration, useElastic, onComplete));
     }
 
     private static IEnumerator Animate(RectTransform rectTransform,
         Vector2 startPosition, Vector2 endPosition, Vector2 startScale, Vector2 endScale, float duration,
-        bool useElastic, UnityEvent onComplete)
+        bool useElastic, Action onComplete)
     {
         float elapsedTime = 0f;
 

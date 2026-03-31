@@ -19,7 +19,7 @@ public class PlayerTeamIdleState : PlayerTeamState
     public override void Update()
     {
         base.Update();
-        team.currentLeader.MovementInput(out Vector3 direction);
+        team.currentControl.MovementInput(out Vector3 direction);
         if (direction != Vector3.zero)
         {
             team.stateMachine.ChangeState(team.teamActionState);

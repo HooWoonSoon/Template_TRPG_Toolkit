@@ -16,7 +16,7 @@ public class PlayerCharacter : CharacterBase
     #endregion
 
     #region state
-    public bool isLeader;
+    public bool setControl;
     public bool isLink;
 
     public bool isMoving;
@@ -49,10 +49,50 @@ public class PlayerCharacter : CharacterBase
     private float targetStep;
     #endregion
 
+    [Header("Lock")]
+    public bool movementLock = false;
+
+    [Header("Lock Sources")]
+    public bool isQueueActive = false;
+    public bool isOptionalUIActive = false;
+
     public bool debugMode = false;
 
     public Vector3 direction { get; private set; }
 
+    private void OnEnable()
+    {
+        if (PlayerTeamLinkUIManager.instance != null)
+        {
+            PlayerTeamLinkUIManager.instance.OnQueueState += (enable) => 
+            {
+                isQueueActive = enable;
+                UpdateMovementLock();
+            };
+            PlayerTeamLinkUIManager.instance.OnOptionalUIState += (enable) => 
+            { 
+                isOptionalUIActive = enable;
+                UpdateMovementLock();
+            };
+        }
+
+    }
+    private void OnDisable()
+    {
+        if (PlayerTeamLinkUIManager.instance != null)
+        {
+            PlayerTeamLinkUIManager.instance.OnQueueState -= (enable) =>
+            {
+                isQueueActive = enable;
+                UpdateMovementLock();
+            };
+            PlayerTeamLinkUIManager.instance.OnOptionalUIState += (enable) =>
+            {
+                isOptionalUIActive = enable;
+                UpdateMovementLock();
+            };
+        }
+    }
     private void Awake()
     {
         stateMechine = new PlayerStateMachine();
@@ -76,6 +116,16 @@ public class PlayerCharacter : CharacterBase
         {
             stateMechine.ChangeState(deploymentState);
         };
+        PlayerTeamLinkUIManager.instance.OnQueueState += (enable) =>
+        {
+            isQueueActive = enable;
+            UpdateMovementLock();
+        };
+        PlayerTeamLinkUIManager.instance.OnOptionalUIState += (enable) =>
+        {
+            isOptionalUIActive = enable;
+            UpdateMovementLock();
+        };
     }
 
     protected override void Update()
@@ -94,6 +144,13 @@ public class PlayerCharacter : CharacterBase
     {
         stateMechine.currentState.LateUpdate();
     }
+
+    #region Lock
+    private void UpdateMovementLock()
+    {
+        movementLock = isQueueActive || isOptionalUIActive;
+    }
+    #endregion
 
     #region History
     public void UpdateHistory()
@@ -121,6 +178,11 @@ public class PlayerCharacter : CharacterBase
     }
     public void MovementInput(out Vector3 direction)
     {
+        if (movementLock)
+        {
+            direction = Vector3.zero;
+            return;
+        }
         float x = Input.GetAxis("Horizontal");
         float z = Input.GetAxis("Vertical");
 

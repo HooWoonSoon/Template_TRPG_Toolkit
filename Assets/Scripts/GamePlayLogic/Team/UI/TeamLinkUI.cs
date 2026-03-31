@@ -1,37 +1,34 @@
-﻿using System;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 
-[Serializable]
-public class TeamLinkUI
+public class TeamLinkUI : MonoBehaviour
 {
     public PlayerCharacter character { get; private set; }
     public int index { get; private set; }
-    public int Index
-    {
-        get => character != null ? character.index : index;
-        set
-        {
-            if (character != null)
-            {
-                character.index = value;
-            }
-            index = value;
-        }
-    }
 
     #region Image
-    public Vector2 rectPosition;
+    public Vector2 locatedPos;
     public Image controlImage;
     public Image characterIcon;
     #endregion
-    public bool canDrag = false; 
+
+    public Vector2 uiPopupPos;
+
+    private bool enableSway;
+
+    private void Update()
+    {
+        if (enableSway)
+            SwayUI();
+    }
 
     #region TeamLink UI Management
     public void Initialize(PlayerCharacter character, int index)
     {
         this.character = character;
-        controlImage.rectTransform.anchoredPosition = rectPosition;
+        controlImage.rectTransform.anchoredPosition = locatedPos;
+        this.index = index;
+        character.index = index;
 
         if (characterIcon != null)
         {
@@ -42,39 +39,38 @@ public class TeamLinkUI
                 characterIcon.sprite = sprite;
             }
         }
-
-        Index = index;
-
-        if (character.unitState == UnitState.Active)
-            canDrag = true;
-
-        LinkCharacter();
+        LinkCharacter(true);
     }
-
-    public void UpdatePosition(Vector2 newPosition)
+    public void EnableSway(bool enable)
     {
-        rectPosition = newPosition;
-        controlImage.rectTransform.anchoredPosition = rectPosition;
+        controlImage.rectTransform.localRotation = Quaternion.Euler(Vector3.zero);
+        enableSway = enable;
     }
-
-    public void AdjustOffsetToPosition(Vector2 newPosition)
+    private void SwayUI()
     {
-        controlImage.rectTransform.anchoredPosition += newPosition;
+        float rotateZAngle = 3f;
+        Quaternion rotateAngleForward = Quaternion.Euler(new Vector3(0, 0, rotateZAngle));
+        Quaternion rotateAngleReverse = Quaternion.Euler(new Vector3(0, 0, -rotateZAngle));
+        float t = Mathf.PingPong(Time.time * 10f, 1f);
+        controlImage.rectTransform.localRotation = Quaternion.Lerp(rotateAngleForward, rotateAngleReverse, t);
     }
-
-    public bool Swap(TeamLinkUI other)
+    public bool SwapUI(TeamLinkUI other)
     {
         if (other == null) return false;
 
         bool changed = false;
-
-        if (rectPosition != other.rectPosition)
+        if (locatedPos != other.locatedPos)
         {
-            SwapPosition(other);
+            SwapLocatedPos(other);
             changed = true;
         }
 
-        if (Index != other.Index)
+        if (uiPopupPos != other.uiPopupPos)
+        {
+            SwapUIPopPos(other);
+        }
+
+        if (index != other.index)
         {
             SwapIndex(other);
             changed = true;
@@ -88,35 +84,49 @@ public class TeamLinkUI
 
         return changed;
     }
-
-    private void SwapPosition(TeamLinkUI other)
+    private void SwapLocatedPos(TeamLinkUI other)
     {
-        Vector2 tempPosition = other.rectPosition;
-        other.UpdatePosition(rectPosition);
+        Vector2 tempPosition = other.locatedPos;
+        other.UpdatePosition(locatedPos);
         UpdatePosition(tempPosition);
     }
-
+    private void SwapUIPopPos(TeamLinkUI other)
+    {
+        Vector2 tempUIPopPos = other.uiPopupPos;
+        other.uiPopupPos = uiPopupPos;
+        uiPopupPos = tempUIPopPos;
+    }
     private void SwapIndex(TeamLinkUI other)
     {
-        int tempIndex = other.Index;
-        other.Index = Index;
-        Index = tempIndex;
+        int tempIndex = other.index;
+        other.SetIndex(index);
+        SetIndex(tempIndex);
+    }
+    public void SetIndex(int newIndex)
+    {
+        index = newIndex;
+        if (character != null)
+            character.index = newIndex;
+    }
+    private void UpdatePosition(Vector2 newPosition)
+    {
+        locatedPos = newPosition;
+        controlImage.rectTransform.anchoredPosition = locatedPos;
     }
 
+    public void AdjustOffsetToPosition(Vector2 newPosition)
+    {
+        controlImage.rectTransform.anchoredPosition += newPosition;
+    }
     public void ResetPosition()
     {
         if (controlImage != null)
-            controlImage.rectTransform.anchoredPosition = rectPosition;
+            controlImage.rectTransform.anchoredPosition = locatedPos;
     }
 
-    public void UnlinkCharacter()
+    public void LinkCharacter(bool boolean)
     {
-        character.isLink = false;
-    }
-
-    public void LinkCharacter()
-    {
-        character.isLink = true;
+        character.isLink = boolean;
     }
     #endregion
 }

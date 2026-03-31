@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using Unity.VisualScripting;
 using UnityEngine;
 
 namespace Tactics.AI
@@ -97,12 +96,11 @@ namespace Tactics.AI
                 utilityAI.defenseBackRuleScore, RuleDebugContext.DefenseBack));
         }
 
-
         public struct SkillEvaluationResult
         {
             public float skillScore;
             public SkillData originSkill;
-            public GameNode skillCastNode;
+            public GameNode originNode;
             public GameNode originSkillTargetNode;
             public string sourceSkill;
         }
@@ -162,10 +160,10 @@ namespace Tactics.AI
             if (decision == Decision.OriginCastSkill)
             {
                 skill = skillResult.originSkill;
-                moveNode = skillResult.skillCastNode;
+                moveNode = skillResult.originNode;
                 skillTargetNode = skillResult.originSkillTargetNode;
 
-                if (skillResult.originSkill != null && skillResult.originSkillTargetNode != null)
+                if (skill != null && skillTargetNode != null)
                 {
                     executeLog =
                     $"Decision: Origin Cast Skill, " +
@@ -179,11 +177,14 @@ namespace Tactics.AI
                 moveNode = moveAndSkillResult.moveSkillMoveNode;
                 skillTargetNode = moveAndSkillResult.moveSkillTargetNode;
 
-                executeLog =
-                    $"Decision: Move And Cast Skill, " +
-                    $"Execute Option: {moveAndSkillResult.sourceMoveAndSkill}, " +
-                    $"Move: {moveNode.GetNodeVectorInt()}, " +
-                    $"Skill: {skill.skillName} at {skillTargetNode.GetNodeVectorInt()}";
+                if (skill != null && moveNode != null && skillTargetNode != null)
+                {
+                    executeLog =
+                        $"Decision: Move And Cast Skill, " +
+                        $"Execute Option: {moveAndSkillResult.sourceMoveAndSkill}, " +
+                        $"Move: {moveNode.GetNodeVectorInt()}, " +
+                        $"Skill: {skill.skillName} at {skillTargetNode.GetNodeVectorInt()}";
+                }
             }
             else if (decision == Decision.Move)
             {
@@ -221,7 +222,7 @@ namespace Tactics.AI
         private IEnumerator SkillEvaluateCoroutine(bool allowSkill, Action<SkillEvaluationResult> onComplete)
         {
             SkillEvaluate(allowSkill, out float skillBestScore,
-            out SkillData originSkill, out GameNode skillCastNode,
+            out SkillData originSkill, out GameNode originNode,
             out GameNode originSkillTargetNode,
             out string sourceSkill);
 
@@ -231,7 +232,7 @@ namespace Tactics.AI
             {
                 skillScore = skillBestScore,
                 originSkill = originSkill,
-                skillCastNode = skillCastNode,
+                originNode = originNode,
                 originSkillTargetNode = originSkillTargetNode,
                 sourceSkill = sourceSkill
             };

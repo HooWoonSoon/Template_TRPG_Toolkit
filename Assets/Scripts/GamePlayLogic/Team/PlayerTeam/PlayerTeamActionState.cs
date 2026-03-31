@@ -9,8 +9,8 @@ public class PlayerTeamActionState : PlayerTeamState
     public override void Enter()
     {
         base.Enter();
-        PlayerTeamLinkUIManager.instance.PopInTeamLinkOptionContent();
-        CameraController.instance.ChangeFollowTarget(team.currentLeader.transform);
+        //PlayerTeamLinkUIManager.instance.PopInTeamLinkOptionContent();
+        CameraController.instance.ChangeFollowTarget(team.currentControl.transform);
     }
 
     public override void Exit()
@@ -22,8 +22,8 @@ public class PlayerTeamActionState : PlayerTeamState
     {
         base.Update();
         
-        team.currentLeader.MovementInput(out Vector3 direction);
-        team.currentLeader.SetMoveDirection(direction);
+        team.currentControl.MovementInput(out Vector3 direction);
+        team.currentControl.SetMoveDirection(direction);
 
         bool anyMoving = false;
 

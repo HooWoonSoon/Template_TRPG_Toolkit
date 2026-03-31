@@ -155,7 +155,7 @@ public class EnemyBattleState : EnemyBaseState
                 FreezeTillThinkingComplete(true, false);
                 break;
             case AgentBattlePhase.Move:
-                if (confirmMoveNode != null)
+                if (confirmMoveNode != null && confirmMoveNode != character.currentNode)
                 {
                     character.ShowDangerMovableAndTargetTilemap(confirmMoveNode);
                     CameraController.instance.ChangeFollowTarget(character.transform);
