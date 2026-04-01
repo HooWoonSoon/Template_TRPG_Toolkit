@@ -59,6 +59,7 @@ public class TeamLinkUI : MonoBehaviour
         if (other == null) return false;
 
         bool changed = false;
+
         if (locatedPos != other.locatedPos)
         {
             SwapLocatedPos(other);

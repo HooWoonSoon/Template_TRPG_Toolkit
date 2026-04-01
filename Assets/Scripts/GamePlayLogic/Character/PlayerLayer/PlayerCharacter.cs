@@ -16,7 +16,7 @@ public class PlayerCharacter : CharacterBase
     #endregion
 
     #region state
-    public bool setControl;
+    public bool setLeader;
     public bool isLink;
 
     public bool isMoving;

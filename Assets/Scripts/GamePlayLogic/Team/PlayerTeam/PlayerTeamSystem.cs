@@ -5,7 +5,7 @@ public class PlayerTeamSystem : TeamSystem
     public TeamDeployment teamDeployment;
     public List<TeamFollower> linkMembers;
     private List<PlayerCharacter> unlinkMember = new List<PlayerCharacter>();
-    public PlayerCharacter currentControl { get; private set; }
+    public PlayerCharacter currentLeader { get; private set; }
 
     public int spacingDistance = 2;
     [SerializeField] private int historyLimit = 15;
@@ -123,11 +123,9 @@ public class PlayerTeamSystem : TeamSystem
                     minFollower = unsortList[i];
                 }
             }
-
             sortedList.Add(minFollower);
             unsortList.Remove(minFollower);
         }
-
         linkMembers = sortedList;
         RefreshTeamFollower();
         SetTeamControl();
@@ -165,7 +163,7 @@ public class PlayerTeamSystem : TeamSystem
     /// </summary>
     public void SetTeamControl()
     {
-        currentControl = null;
+        currentLeader = null;
 
         for (int i = 0; i < linkMembers.Count; i++)
         {
@@ -173,11 +171,26 @@ public class PlayerTeamSystem : TeamSystem
 
             if (linkMembers[i].character.index == 0) 
             { 
-                unitCharacter.setControl = true;
-                currentControl = unitCharacter;
-                GameEvent.onLeaderChanged?.Invoke(currentControl);
+                unitCharacter.setLeader = true;
+                currentLeader = unitCharacter;
+                GameEvent.onLeaderChanged?.Invoke(currentLeader);
             }
-            else { unitCharacter.setControl = false; }
+            else { unitCharacter.setLeader = false; }
+        }
+    }
+
+    public void SetTeamControl(PlayerCharacter character)
+    {
+        for (int i = 0; i < linkMembers.Count; i++)
+        {
+            PlayerCharacter unitCharacter = linkMembers[i].character;
+
+            if (linkMembers[i].character == character)
+            {
+                unitCharacter.setLeader = true;
+                currentLeader = unitCharacter;
+            }
+            else { unitCharacter.setLeader = false; }
         }
     }
     #endregion
@@ -239,7 +252,7 @@ public class PlayerTeamSystem : TeamSystem
     {
         direction = Vector3.zero;
 
-        if (!currentControl.isMoving) { return; }
+        if (!currentLeader.isMoving) { return; }
         if (member == null || follower.positionHistory.Count < 2) return;
 
         List<Vector3> history = follower.positionHistory;
