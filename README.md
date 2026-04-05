@@ -75,3 +75,76 @@ Unity 版本: 6000.0.30f1
 ## 优化
 ### 代理抉择
 由于代理的条件与计算复杂所以需要在单帧内消耗大量的计算机性能，并且Job System上难以对其分配，项目中虽完成了Job 寻路算法，但是还没有非常有价值的应用方向，所以AI的抉择优化上只实施了Coroutine的分帧计算。同时在表现上避免了主线程卡顿。
+
+# Unity Engine Tactical RPG Heuristic Agent Template
+Unity Version: 6000.0.30f1
+
+## Introduction
+
+This project addresses the bugs and decision-making delays present in the original thesis project. However, it has not been tested under extreme conditions (such as maintaining imperceptible latency when dealing with a large number of skills and more than 20 units). Serving as a template for heuristic agents in tactical role-playing games,
+this project implements an intelligent scoring agent for grid-based tactical actions—its behavior is based on the game mechanics designed for the project. The design draws inspiration from four games:
+*Final Fantasy Tactics*, *Divinity: Original Sin 2*, *Tactic Orge Reborn*, and *Triangle Strategy*. Since the project was initially developed with the design philosophy of *Castlevania* in mind, some design elements differ from those of TPRGs and SRPGs.
+This project is implemented on a 3D grid, but the map design still requires refinement; currently, it only supports y-axis heights as integer values, and the same applies to all other design aspects.
+It is also worth noting that map data must be configured using the project’s built-in rudimentary map editor in conjunction with tile tools to generate map data files.
+
+## Tactics Map Editor - Not fully Encapsulate (Tactics Map Editor)
+<img width="400" height="651" alt="image" src="https://github.com/user-attachments/assets/8fba9c06-d0e4-4896-ac71-ab76189dc841" />
+
+This project utilises pre-generated JSON map data created using a custom map editing tool to load specific maps and unload unnecessary ones.
+
+## Character Tactic Turn Order
+This is a game mechanic used to manage and determine the order in which characters take their turns.
+
+<img width="940" height="900" alt="image" src="https://github.com/user-attachments/assets/c0a4de30-c9fa-40c3-b66f-44d1525c027b" />
+
+The image above shows a flowchart of the CT timeline. Compared to the conventional speed-based timeline mechanism, this mechanism introduces a new element: CT fatigue penalty. The order of character actions is determined entirely by character speed until all character action sequences have been assigned.
+Consequently, the CT timeline design allows characters to have multiple action sequences in each sorting round. The final result is presented as a CT round, with each round containing multiple character action rounds.
+The main calculation process is as follows:
+
+<img width="570" height="712" alt="image" src="https://github.com/user-attachments/assets/3edcb173-d05c-43f4-93c0-36c4d550092f" />
+
+## Skill Mechanics
+To ensure tactical diversity, the design of skill mechanics largely determines the tactical AI. Currently, the project has implemented healing skills, damage skills, and original projectile skills. Both MP-consuming and non-MP-consuming skills are supported.
+### Projectiles and Non-Projectiles
+Skills may be blocked by terrain features or units along their flight path. This includes walls, terrain elevation changes, and units identified as friendly or enemy based on skill collision logic.
+### Skill Range
+Skill range is linked to the tactical scope mechanism. When defining skill range and obstruction range, the actual range reflects the characteristics of the tactical range: it extends from the character’s origin to the reachable area, and obstruction calculations begin from the character’s origin. This approach enforces the limitations of the skill range.
+### Skill Conditions
+Skill conditions represent the requirements for casting a skill. In skill design, this condition is set as MP consumption; however, depending on game design, this is not the only acceptable condition.
+
+<img width="544" height="834" alt="image" src="https://github.com/user-attachments/assets/e76d3a85-fe88-4a10-9616-e0c8f4838537" />
+
+## Rules
+Rules are combinations of subcategories of evaluation criteria, and they represent the most critical and logical form of presentation. Rules can also be nested as sub-items of other rules, although these rules do not strictly prohibit the sum of sub-items and parent items from exceeding the parent’s total score. However, current rule design requires that the score of a subcategory rule must not exceed the total score of its parent category.
+### Target Rule
+The Target Rule is based on the agent’s assessment of which unit is best suited for close-range combat. The target is always adjusted according to the decision-maker’s current Frontline Index and target value. Targets may include enemy units and ally units.
+### Movement Target Rule
+The Movement Target Rule aims to find the most suitable, shortest, and safest route to the area surrounding the current target character. Based on the character’s Frontline Index, the higher the index, the lower the decision-maker’s sensitivity to dangerous paths.
+### Skill Damage Rules
+These rules are used to calculate the most appropriate skill abilities for the current situation. The calculation method follows the formula of minimum cost and maximum output.
+### Skill Healing Rules
+This rule is another variant of skill evaluation, specifically designed for healing skills. The core principle behind this distinction is to give the AI more intuitive and easily tunable behavioral tendencies. For example, an agent may exhibit a greater tendency to take offensive actions rather than use healing skills.
+### Risk Movement Rule
+A method for determining the safest positioning rule, ensuring unit safety by evaluating the positions of teammates and enemies, while preventing units from straying too far from the team.
+### Risk Movement Damage Rule
+A variant of the Risk Movement Rule that primarily integrates the skill selection mechanism from the Damage Rule while ensuring the safety of the selected movement position.
+### Risky Movement Healing Rules
+A variant of the Risky Movement Rules that primarily integrates the skill selection mechanism from the Healing Rules while ensuring the safety of the selected movement location.
+### Critical Strike Rules
+These rules typically operate as a subcategory of the Damage Rules, treating the ability to eliminate targets solely as an additional scoring factor.
+### Back Defense Rules
+Adjust orientation appropriately based on terrain and character range.
+
+## Sundries
+### Tactical Character Editor
+The Tactical Character Editor is a tool that combines character data definition and AI debugging. This feature allows you to view the state of AI behavior, thereby aiding in expansion and debugging.
+<img width="1002" height="955" alt="image" src="https://github.com/user-attachments/assets/b392616b-8b63-4dbd-900d-e4f1a34b1dd6" />
+<img width="1000" height="962" alt="image" src="https://github.com/user-attachments/assets/f9fc7447-8bbd-4f1f-a14d-5b7a20f65afb" />
+<img width="1001" height="952" alt="image" src="https://github.com/user-attachments/assets/f2e4e4c6-2dbd-4090-9086-f05e8ecddef1" />
+
+### Skill Editor
+The Skill Editor allows for intuitive configuration of skills and traits. It currently supports projectiles and non-projectiles, but does not include special effects.
+
+## Optimization
+### Agent Decision-Making
+Due to the complexity of agent conditions and calculations, a significant amount of computational power is consumed per frame, and it is difficult to allocate these tasks within the Job System. Although a pathfinding algorithm for Jobs has been implemented in the project, it has not yet found a particularly valuable application. Therefore, for AI decision-making optimization, we have only implemented frame-based calculations using coroutines. This approach also prevents stuttering on the main thread.
